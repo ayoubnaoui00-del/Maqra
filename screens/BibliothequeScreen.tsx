@@ -36,6 +36,7 @@ export default function BibliothequeScreen({ onSelectBook, onGoToProfile }: Prop
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<ReadingStatus | 'all'>('all');
+  const [activeLangFilter, setActiveLangFilter] = useState<string>('all');
   const [showAddModal, setShowAddModal] = useState(false);
 
   const yearly = getYearlyProgress();
@@ -48,6 +49,9 @@ export default function BibliothequeScreen({ onSelectBook, onGoToProfile }: Prop
     if (activeFilter !== 'all') {
       result = result.filter((b) => b.status === activeFilter);
     }
+    if (activeLangFilter !== 'all') {
+      result = result.filter((b) => b.language === activeLangFilter);
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -58,7 +62,7 @@ export default function BibliothequeScreen({ onSelectBook, onGoToProfile }: Prop
       );
     }
     return result;
-  }, [books, activeFilter, searchQuery]);
+  }, [books, activeFilter, activeLangFilter, searchQuery]);
 
   const readingCount = books.filter((b) => b.status === 'reading').length;
 
@@ -139,13 +143,15 @@ export default function BibliothequeScreen({ onSelectBook, onGoToProfile }: Prop
                 onChangeText={setSearchQuery}
                 activeFilter={activeFilter}
                 onFilterChange={setActiveFilter}
+                activeLangFilter={activeLangFilter}
+                onLangFilterChange={setActiveLangFilter}
               />
             </View>
 
             {/* Section title */}
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>
-                {activeFilter === 'all' ? 'جميع الكتب' : 'النتائج'} ({filteredBooks.length})
+                {activeFilter === 'all' && activeLangFilter === 'all' ? 'جميع الكتب' : 'النتائج'} ({filteredBooks.length})
               </Text>
             </View>
           </Animated.View>

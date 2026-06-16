@@ -66,11 +66,23 @@ export default function BookCard({ book, onPress, index = 0 }: BookCardProps) {
             {book.author}
           </Text>
 
-          {/* Status badge */}
-          <View style={[styles.badge, { backgroundColor: statusColor + '22' }]}>
-            <Text style={[styles.badgeText, { color: statusColor }]}>
-              {STATUS_LABELS[book.status]}
-            </Text>
+          {/* Badges row */}
+          <View style={styles.badgesRow}>
+            {/* Status badge */}
+            <View style={[styles.badge, { backgroundColor: statusColor + '22' }]}>
+              <Text style={[styles.badgeText, { color: statusColor }]}>
+                {STATUS_LABELS[book.status]}
+              </Text>
+            </View>
+
+            {/* Language badge */}
+            {book.language && (
+              <View style={[styles.badge, styles.langBadge]}>
+                <Text style={styles.langBadgeText}>
+                  {book.language.toUpperCase()}
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Progress bar (only when reading) */}
@@ -154,16 +166,30 @@ const styles = StyleSheet.create({
     textAlign: I18nManager.isRTL ? 'right' : 'left',
     marginBottom: SPACING.xs,
   },
+  badgesRow: {
+    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
+    gap: 6,
+    alignItems: 'center',
+    marginBottom: SPACING.xs,
+  },
   badge: {
-    alignSelf: I18nManager.isRTL ? 'flex-end' : 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: BORDER_RADIUS.full,
-    marginBottom: SPACING.xs,
   },
   badgeText: {
     fontSize: 10,
     fontWeight: '700',
+  },
+  langBadge: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  langBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: COLORS.textSecondary,
   },
   progressContainer: {
     flexDirection: 'row',

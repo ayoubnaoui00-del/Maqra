@@ -22,11 +22,18 @@ import { ReadingStatus } from '../types';
 import { COLORS, SPACING, BORDER_RADIUS, STATUS_LABELS, ANIMATION_DURATION } from '../constants';
 
 const FILTER_OPTIONS: { label: string; value: ReadingStatus | 'all' }[] = [
-  { label: 'الكل', value: 'all' },
+  { label: 'الكل (حالة)', value: 'all' },
   { label: STATUS_LABELS.reading, value: 'reading' },
   { label: STATUS_LABELS.want_to_read, value: 'want_to_read' },
   { label: STATUS_LABELS.completed, value: 'completed' },
   { label: STATUS_LABELS.paused, value: 'paused' },
+];
+
+const LANG_OPTIONS = [
+  { label: 'الكل (لغة)', value: 'all' },
+  { label: 'العربية', value: 'ar' },
+  { label: 'الفرنسية', value: 'fr' },
+  { label: 'الإنجليزية', value: 'en' },
 ];
 
 interface SearchBarProps {
@@ -34,6 +41,8 @@ interface SearchBarProps {
   onChangeText: (text: string) => void;
   activeFilter: ReadingStatus | 'all';
   onFilterChange: (filter: ReadingStatus | 'all') => void;
+  activeLangFilter: string;
+  onLangFilterChange: (lang: string) => void;
 }
 
 export default function SearchBar({
@@ -41,6 +50,8 @@ export default function SearchBar({
   onChangeText,
   activeFilter,
   onFilterChange,
+  activeLangFilter,
+  onLangFilterChange,
 }: SearchBarProps) {
   const [isFocused, setIsFocused] = useState(false);
   const borderColor = useSharedValue<string>(COLORS.border);
@@ -82,7 +93,7 @@ export default function SearchBar({
         )}
       </Animated.View>
 
-      {/* Filter chips */}
+      {/* Filter chips (Status) */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -102,6 +113,34 @@ export default function SearchBar({
               style={[
                 styles.chipText,
                 activeFilter === opt.value && styles.chipTextActive,
+              ]}
+            >
+              {opt.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {/* Filter chips (Language) */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filtersContainer}
+        style={styles.filters}
+      >
+        {LANG_OPTIONS.map((opt) => (
+          <TouchableOpacity
+            key={opt.value}
+            onPress={() => onLangFilterChange(opt.value)}
+            style={[
+              styles.chip,
+              activeLangFilter === opt.value && styles.chipActiveLang,
+            ]}
+          >
+            <Text
+              style={[
+                styles.chipText,
+                activeLangFilter === opt.value && styles.chipTextActive,
               ]}
             >
               {opt.label}
@@ -160,6 +199,10 @@ const styles = StyleSheet.create({
   chipActive: {
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
+  },
+  chipActiveLang: {
+    backgroundColor: COLORS.accent,
+    borderColor: COLORS.accent,
   },
   chipText: {
     fontSize: 12,

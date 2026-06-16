@@ -17,8 +17,10 @@ import {
   I18nManager,
   TouchableWithoutFeedback,
   Keyboard,
+  Image,
 } from 'react-native';
 import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
+import * as ImagePicker from 'expo-image-picker';
 import { useBookStore } from '../store/useBookStore';
 import { ReadingStatus } from '../types';
 import { COLORS, SPACING, BORDER_RADIUS, BORDER_RADIUS as BR, STATUS_LABELS } from '../constants';
@@ -38,8 +40,30 @@ export default function AddBookModal({ visible, onClose }: AddBookModalProps) {
   const [totalPages, setTotalPages] = useState('');
   const [status, setStatus] = useState<ReadingStatus>('want_to_read');
   const [genre, setGenre] = useState('');
+  const [language, setLanguage] = useState<string>('ar');
+  const [coverUri, setCoverUri] = useState<string | undefined>(undefined);
 
   const isValid = title.trim().length > 0 && Number(totalPages) > 0;
+
+  async function handlePickCover() {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (permissionResult.granted === false) {
+      alert('يجب السماح بالوصول إلى معرض الصور لاختيار غلاف!');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [2, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setCoverUri(result.assets[0].uri);
+    }
+  }
 
   function handleAdd() {
     if (!isValid) return;
@@ -49,6 +73,8 @@ export default function AddBookModal({ visible, onClose }: AddBookModalProps) {
       totalPages: Number(totalPages),
       status,
       genre: genre.trim() || undefined,
+      language,
+      coverUri,
     });
     resetForm();
     onClose();
@@ -60,6 +86,8 @@ export default function AddBookModal({ visible, onClose }: AddBookModalProps) {
     setTotalPages('');
     setStatus('want_to_read');
     setGenre('');
+    setLanguage('ar');
+    setCoverUri(undefined);
   }
 
   function handleCancel() {
@@ -98,6 +126,25 @@ export default function AddBookModal({ visible, onClose }: AddBookModalProps) {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
+            {/* Cover Selector */}
+            <View style={styles.coverSelectorContainer}>
+              <TouchableOpacity style={styles.coverPicker} onPress={handlePickCover} activeOpacity={0.8}>
+                {coverUri ? (
+                  <Image source={{ uri: coverUri }} style={styles.selectedCover} resizeMode="cover" />
+                ) : (
+                  <View style={styles.coverPlaceholder}>
+                    <Text style={styles.coverPlaceholderIcon}>🖼️</Text>
+                    <Text style={styles.coverPlaceholderText}>اختر غلافاً</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              {coverUri && (
+                <TouchableOpacity style={styles.removeCoverBtn} onPress={() => setCoverUri(undefined)}>
+                  <Text style={styles.removeCoverText}>حذف الغلاف</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
             {/* Title */}
             <Text style={styles.label}>عنوان الكتاب *</Text>
             <TextInput
@@ -142,6 +189,34 @@ export default function AddBookModal({ visible, onClose }: AddBookModalProps) {
               placeholderTextColor={COLORS.textMuted}
               textAlign={I18nManager.isRTL ? 'right' : 'left'}
             />
+
+            {/* Language */}
+            <Text style={styles.label}>اللغة</Text>
+            <View style={styles.statusRow}>
+              {[
+                { label: 'العربية', value: 'ar' },
+                { label: 'الفرنسية', value: 'fr' },
+                { label: 'الإنجليزية', value: 'en' },
+              ].map((lang) => (
+                <TouchableOpacity
+                  key={lang.value}
+                  style={[
+                    styles.statusChip,
+                    language === lang.value && styles.statusChipActive,
+                  ]}
+                  onPress={() => setLanguage(lang.value)}
+                >
+                  <Text
+                    style={[
+                      styles.statusChipText,
+                      language === lang.value && styles.statusChipTextActive,
+                    ]}
+                  >
+                    {lang.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             {/* Status */}
             <Text style={styles.label}>الحالة</Text>
@@ -299,5 +374,48 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '800',
     fontSize: 15,
+  },
+  coverSelectorContainer: {
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+    gap: 8,
+  },
+  coverPicker: {
+    width: 90,
+    height: 125,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    borderStyle: 'dashed',
+    backgroundColor: COLORS.surface,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  selectedCover: {
+    width: '100%',
+    height: '100%',
+  },
+  coverPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  coverPlaceholderIcon: {
+    fontSize: 24,
+  },
+  coverPlaceholderText: {
+    fontSize: 10,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+  },
+  removeCoverBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  removeCoverText: {
+    color: COLORS.error,
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

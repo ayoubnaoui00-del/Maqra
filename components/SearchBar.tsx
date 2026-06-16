@@ -43,7 +43,7 @@ export default function SearchBar({
   onFilterChange,
 }: SearchBarProps) {
   const [isFocused, setIsFocused] = useState(false);
-  const borderColor = useSharedValue(COLORS.border);
+  const borderColor = useSharedValue<string>(COLORS.border);
 
   const animatedInputStyle = useAnimatedStyle(() => ({
     borderColor: borderColor.value,

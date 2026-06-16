@@ -1,13 +1,18 @@
 {
   "expo": {
     "name": "Maqra",
-    "slug": "Maqra",
+    "slug": "maqra",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Maqra needs camera access to update your profile picture.",
+        "NSPhotoLibraryUsageDescription": "Maqra needs access to your photos to update your profile picture.",
+        "NSMicrophoneUsageDescription": "Maqra needs microphone access for camera features."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -20,6 +25,17 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Maqra needs camera access to update your profile picture.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ]
+    ]
   }
 }
+

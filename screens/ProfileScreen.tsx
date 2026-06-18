@@ -109,7 +109,7 @@ export default function ProfileScreen({ onNavigate }: { onNavigate?: (screen: Sc
               value={ritualNotifs} 
               onValueChange={setRitualNotifs} 
               trackColor={{ false: COLORS.surfaceContainerHighest, true: COLORS.primaryFixedDim }}
-              thumbColor={COLORS.surfaceVariant || '#353534'}
+              thumbColor={COLORS.outlineVariant || '#353534'}
             />
           </View>
 

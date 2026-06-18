@@ -1,20 +1,128 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, SafeAreaView } from 'react-native';
+import React, { useState } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  TouchableOpacity, 
+  Image, 
+  SafeAreaView, 
+  Modal, 
+  TextInput,
+  Dimensions,
+  Alert
+} from 'react-native';
+import { useBookStore } from '../store/useBookStore';
+import { ScreenName } from '../App';
+import { Book, ReadingStatus } from '../types';
+
+const { width } = Dimensions.get('window');
 
 const COLORS = {
   background: '#131313',
-  primaryContainer: '#d4af37',
+  primaryContainer: '#d4af37', // imperial gold
   primaryFixed: '#ffe088',
+  primaryFixedDim: '#e9c349',
   surfaceContainer: '#201f1f',
   surfaceContainerLow: '#1c1b1b',
+  surfaceContainerHigh: '#2a2a2a',
   surfaceContainerHighest: '#353534',
   onSurface: '#e5e2e1',
   onSurfaceVariant: '#d0c5af',
+  outlineVariant: '#4d4635',
+  danger: '#8f1d1d',
 };
 
-import { ScreenName } from '../App';
+interface LibraryScreenProps {
+  onNavigate?: (screen: ScreenName) => void;
+  onStartSession?: (bookId: string) => void;
+}
 
-export default function LibraryScreen({ onNavigate }: { onNavigate?: (screen: ScreenName) => void }) {
+export default function LibraryScreen({ onNavigate, onStartSession }: LibraryScreenProps) {
+  const books = useBookStore((s) => s.books);
+  const deleteBook = useBookStore((s) => s.deleteBook);
+  const setBookStatus = useBookStore((s) => s.setBookStatus);
+  const updateReadingProgress = useBookStore((s) => s.updateReadingProgress);
+  const rateBook = useBookStore((s) => s.rateBook);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const [progressInput, setProgressInput] = useState('');
+
+  // Find the featured book (currently reading)
+  const featuredBook = books.find(b => b.status === 'reading') || books[0];
+
+  // Filter books list for Recent Acquisitions grid
+  const filteredBooks = books.filter(b => {
+    const matchesSearch = b.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          b.author.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  });
+
+  const openBookDetails = (book: Book) => {
+    setSelectedBook(book);
+    setProgressInput(book.currentPage.toString());
+  };
+
+  const handleUpdateProgress = () => {
+    if (!selectedBook) return;
+    const pageNum = parseInt(progressInput, 10);
+    if (isNaN(pageNum) || pageNum < 0 || pageNum > selectedBook.totalPages) {
+      Alert.alert('Invalid Page', `Please enter a page between 0 and ${selectedBook.totalPages}.`);
+      return;
+    }
+    updateReadingProgress(selectedBook.id, pageNum);
+    
+    // Refresh modal state
+    const updated = useBookStore.getState().books.find(b => b.id === selectedBook.id);
+    if (updated) {
+      setSelectedBook(updated);
+    }
+    Alert.alert('Success', 'Reading progress updated.');
+  };
+
+  const handleStatusChange = (status: ReadingStatus) => {
+    if (!selectedBook) return;
+    setBookStatus(selectedBook.id, status);
+    const updated = useBookStore.getState().books.find(b => b.id === selectedBook.id);
+    if (updated) {
+      setSelectedBook(updated);
+    }
+  };
+
+  const handleRateBook = (rating: number) => {
+    if (!selectedBook) return;
+    rateBook(selectedBook.id, rating);
+    const updated = useBookStore.getState().books.find(b => b.id === selectedBook.id);
+    if (updated) {
+      setSelectedBook(updated);
+    }
+  };
+
+  const handleDeleteBook = () => {
+    if (!selectedBook) return;
+    Alert.alert(
+      'Remove Text',
+      `Are you sure you want to remove "${selectedBook.title}" from the archives?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Remove', 
+          style: 'destructive',
+          onPress: () => {
+            deleteBook(selectedBook.id);
+            setSelectedBook(null);
+          }
+        }
+      ]
+    );
+  };
+
+  // Compute stats
+  const totalBooks = books.length;
+  const completedBooks = books.filter(b => b.status === 'completed').length;
+  const completionPercentage = totalBooks > 0 ? Math.round((completedBooks / totalBooks) * 100) : 0;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
@@ -24,7 +132,7 @@ export default function LibraryScreen({ onNavigate }: { onNavigate?: (screen: Sc
             <Text style={styles.iconText}>☰</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>MAQRA</Text>
-          <TouchableOpacity style={styles.iconButton}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => onNavigate?.('Temple')}>
             <Text style={styles.iconText}>👤</Text>
           </TouchableOpacity>
         </View>
@@ -34,6 +142,17 @@ export default function LibraryScreen({ onNavigate }: { onNavigate?: (screen: Sc
           <Text style={styles.pageTitle}>Library</Text>
           <Text style={styles.pageSubtitle}>ANCIENT ARCHIVES</Text>
           <View style={styles.divider} />
+        </View>
+
+        {/* Search Archives */}
+        <View style={styles.searchContainer}>
+          <TextInput
+            placeholder="Search archives by title or author..."
+            placeholderTextColor={COLORS.onSurfaceVariant}
+            style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
         </View>
 
         {/* Imperial Status */}
@@ -46,76 +165,217 @@ export default function LibraryScreen({ onNavigate }: { onNavigate?: (screen: Sc
           <View style={styles.progressRow}>
             <View style={styles.progressHeader}>
               <Text style={styles.progressLabel}>Knowledge Deciphered</Text>
-              <Text style={styles.progressValue}>73%</Text>
+              <Text style={styles.progressValue}>{completionPercentage}%</Text>
             </View>
             <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: '73%' }]} />
-            </View>
-          </View>
-          
-          <View style={styles.progressRow}>
-            <View style={styles.progressHeader}>
-              <Text style={styles.progressLabel}>Ritual Completion</Text>
-              <Text style={styles.progressValue}>45%</Text>
-            </View>
-            <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: '45%' }]} />
+              <View style={[styles.progressBarFill, { width: `${completionPercentage}%` }]} />
             </View>
           </View>
 
           <View style={styles.badgeRow}>
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>🔖 Scholar</Text>
+              <Text style={styles.badgeText}>🔖 {completedBooks} / {totalBooks} Completed</Text>
             </View>
           </View>
         </View>
 
-        {/* Currently Reading */}
-        <View style={styles.featuredSection}>
-          <Image 
-            source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAgDdbqL8xvzNfzY3-gMJjUTnmIgDt91OQR-RkO5XL0-B4ZjFpmwwATnVUpD5dLmLcKN0wpmBhRr5jJYzQDfT5aDmdQ6CtTYS1WZsd8nL4u7pi8ctIGyqcyJ-251oc3z-jgllaJLT4WazEisVtZfd2s58txSfcgcNEI-MXZrkFIc326u_-n3JDx4XoHIUumHlQbfu-j5Unb1kcYVJER8jmphBJofMfM4F3iRFBM72vGIEUaT2cL30n-JMgEpnZGVI6HTkKEPNg5mfyl' }} 
-            style={styles.featuredImage} 
-          />
-          <View style={styles.featuredContent}>
-            <Text style={styles.featuredLabel}>CURRENTLY READING</Text>
-            <Text style={styles.featuredTitle}>The Codex of Antioch</Text>
-            <Text style={styles.featuredDesc}>
-              Transcribed from the original stele, this volume details the foundational rites of the early empire.
-            </Text>
-            <TouchableOpacity style={styles.primaryButton}>
-              <Text style={styles.primaryButtonText}>📖 Continue Reading</Text>
-            </TouchableOpacity>
+        {/* Currently Reading Featured Section */}
+        {featuredBook && (
+          <View style={styles.featuredSection}>
+            {featuredBook.coverUri ? (
+              <Image source={{ uri: featuredBook.coverUri }} style={styles.featuredImage} />
+            ) : (
+              <View style={[styles.featuredImage, styles.featuredImagePlaceholder]}>
+                <Text style={styles.placeholderLetter}>{featuredBook.title[0]}</Text>
+              </View>
+            )}
+            <View style={styles.featuredContent}>
+              <Text style={styles.featuredLabel}>CURRENTLY READING</Text>
+              <Text style={styles.featuredTitle}>{featuredBook.title}</Text>
+              <Text style={styles.featuredAuthor}>by {featuredBook.author}</Text>
+              <Text style={styles.featuredDesc}>
+                Current progress: {featuredBook.currentPage} / {featuredBook.totalPages} pages ({Math.round((featuredBook.currentPage / featuredBook.totalPages) * 100)}%)
+              </Text>
+              <View style={styles.featuredButtons}>
+                <TouchableOpacity 
+                  style={styles.primaryButton} 
+                  onPress={() => onStartSession?.(featuredBook.id)}
+                >
+                  <Text style={styles.primaryButtonText}>📖 Continue Reading</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.secondaryButton} 
+                  onPress={() => openBookDetails(featuredBook)}
+                >
+                  <Text style={styles.secondaryButtonText}>Details</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Recent Acquisitions */}
         <View style={styles.recentSection}>
-          <View style={styles.recentHeader}>
+          <View style={styles.recentHeaderStyle}>
             <Text style={styles.sectionTitle}>Recent Acquisitions</Text>
-            <TouchableOpacity>
-              <Text style={styles.viewAllText}>VIEW ALL →</Text>
-            </TouchableOpacity>
           </View>
 
           <View style={styles.grid}>
-            {[
-              { title: 'Decrees of Sol', vol: 'Volume I' },
-              { title: 'Rituals of Ash', vol: 'Volume IV' },
-              { title: 'Letters to the Senate', vol: 'Unabridged' },
-              { title: 'Forbidden Texts', vol: 'Sealed' }
-            ].map((book, idx) => (
-              <View key={idx} style={styles.gridItem}>
-                <View style={styles.gridImagePlaceholder}>
-                  <Text style={styles.gridItemNumber}>{(idx + 1).toString()}</Text>
-                </View>
-                <Text style={styles.gridItemTitle} numberOfLines={1}>{book.title}</Text>
-                <Text style={styles.gridItemSub}>{book.vol}</Text>
-              </View>
-            ))}
+            {filteredBooks.map((book) => {
+              const progressPct = Math.round((book.currentPage / book.totalPages) * 100);
+              return (
+                <TouchableOpacity 
+                  key={book.id} 
+                  style={styles.gridItem}
+                  onPress={() => openBookDetails(book)}
+                >
+                  {book.coverUri ? (
+                    <Image source={{ uri: book.coverUri }} style={styles.gridImage} />
+                  ) : (
+                    <View style={styles.gridImagePlaceholder}>
+                      <Text style={styles.gridItemLetter}>{book.title[0]}</Text>
+                    </View>
+                  )}
+                  <Text style={styles.gridItemTitle} numberOfLines={1}>{book.title}</Text>
+                  <Text style={styles.gridItemSub} numberOfLines={1}>{book.author}</Text>
+                  <View style={styles.gridProgressRow}>
+                    <View style={styles.gridProgressBarBg}>
+                      <View style={[styles.gridProgressBarFill, { width: `${progressPct}%` }]} />
+                    </View>
+                    <Text style={styles.gridProgressText}>{progressPct}%</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
-
       </ScrollView>
+
+      {/* Book Detail Modal */}
+      {selectedBook && (
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={!!selectedBook}
+          onRequestClose={() => setSelectedBook(null)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              
+              {/* Modal Header */}
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalHeaderTitle}>Text Details</Text>
+                <TouchableOpacity onPress={() => setSelectedBook(null)} style={styles.modalCloseButton}>
+                  <Text style={styles.modalCloseText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView contentContainerStyle={styles.modalScroll}>
+                
+                {/* Book Meta Card */}
+                <View style={styles.modalBookCard}>
+                  {selectedBook.coverUri ? (
+                    <Image source={{ uri: selectedBook.coverUri }} style={styles.modalCover} />
+                  ) : (
+                    <View style={styles.modalCoverPlaceholder}>
+                      <Text style={styles.modalCoverLetter}>{selectedBook.title[0]}</Text>
+                    </View>
+                  )}
+                  <View style={styles.modalBookDetails}>
+                    <Text style={styles.modalTitle} numberOfLines={2}>{selectedBook.title}</Text>
+                    <Text style={styles.modalAuthor}>by {selectedBook.author}</Text>
+                    <Text style={styles.modalMetaInfo}>Language: {selectedBook.language?.toUpperCase() || 'EN'}</Text>
+                    <Text style={styles.modalMetaInfo}>Total Leaves: {selectedBook.totalPages} pages</Text>
+                  </View>
+                </View>
+
+                {/* Stars Rating Selector */}
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionLabel}>EMPEROR RATING</Text>
+                  <View style={styles.ratingRow}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <TouchableOpacity key={star} onPress={() => handleRateBook(star)}>
+                        <Text style={[
+                          styles.starIcon, 
+                          star <= (selectedBook.rating || 0) ? styles.starIconActive : styles.starIconInactive
+                        ]}>
+                          ★
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Reading Status Selector */}
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionLabel}>ARCHIVAL STATUS</Text>
+                  <View style={styles.statusButtonGroup}>
+                    {(['want_to_read', 'reading', 'paused', 'completed'] as ReadingStatus[]).map((status) => (
+                      <TouchableOpacity 
+                        key={status} 
+                        style={[
+                          styles.statusSelectButton,
+                          selectedBook.status === status && styles.statusSelectButtonActive
+                        ]}
+                        onPress={() => handleStatusChange(status)}
+                      >
+                        <Text style={[
+                          styles.statusSelectButtonText,
+                          selectedBook.status === status && styles.statusSelectButtonActiveText
+                        ]}>
+                          {status.replace(/_/g, ' ').toUpperCase()}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Progress Input Form */}
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionLabel}>DECIPHERED PROGRESS</Text>
+                  <View style={styles.progressEditRow}>
+                    <TextInput
+                      style={styles.progressTextInput}
+                      keyboardType="numeric"
+                      value={progressInput}
+                      onChangeText={setProgressInput}
+                      placeholder="Page"
+                      placeholderTextColor={COLORS.onSurfaceVariant}
+                    />
+                    <Text style={styles.progressSlash}>/</Text>
+                    <Text style={styles.progressTotalText}>{selectedBook.totalPages} pages</Text>
+                    
+                    <TouchableOpacity style={styles.applyProgressButton} onPress={handleUpdateProgress}>
+                      <Text style={styles.applyProgressButtonText}>SEAL</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Quick actions */}
+                <View style={styles.modalActionsRow}>
+                  <TouchableOpacity 
+                    style={styles.modalStartSessionButton}
+                    onPress={() => {
+                      setSelectedBook(null);
+                      onStartSession?.(selectedBook.id);
+                    }}
+                  >
+                    <Text style={styles.modalStartSessionText}>📖 COMMENCE STUDY</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={styles.modalDeleteButton}
+                    onPress={handleDeleteBook}
+                  >
+                    <Text style={styles.modalDeleteText}>🗑️ DISCARD</Text>
+                  </TouchableOpacity>
+                </View>
+
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
 
       {/* Bottom Nav */}
       <View style={styles.bottomNav}>
@@ -149,7 +409,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
   header: {
     flexDirection: 'row',
@@ -180,7 +440,7 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 40,
     fontWeight: 'bold',
-    color: COLORS.primaryContainer, // Gold text
+    color: COLORS.primaryContainer,
     marginBottom: 8,
     fontFamily: 'MedievalSharp_400Regular',
   },
@@ -196,11 +456,25 @@ const styles = StyleSheet.create({
     marginTop: 16,
     width: '100%',
   },
+  searchContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 16,
+  },
+  searchInput: {
+    backgroundColor: COLORS.surfaceContainerLow,
+    color: COLORS.onSurface,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    fontSize: 14,
+  },
   statusWidget: {
     backgroundColor: COLORS.surfaceContainerLow,
-    margin: 24,
-    marginTop: 0,
-    padding: 24,
+    marginHorizontal: 24,
+    marginBottom: 24,
+    padding: 20,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(212,175,55,0.3)',
@@ -211,16 +485,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   statusTitle: {
-    fontSize: 24,
+    fontSize: 20,
     color: COLORS.primaryFixed,
     fontWeight: 'bold',
     fontFamily: 'MedievalSharp_400Regular',
   },
   fireIcon: {
-    fontSize: 24,
+    fontSize: 20,
   },
   progressRow: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   progressHeader: {
     flexDirection: 'row',
@@ -236,9 +510,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   progressBarBg: {
-    height: 12,
+    height: 10,
     backgroundColor: COLORS.background,
-    borderRadius: 6,
+    borderRadius: 5,
     overflow: 'hidden',
   },
   progressBarFill: {
@@ -246,7 +520,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primaryContainer,
   },
   badgeRow: {
-    marginTop: 8,
+    marginTop: 4,
   },
   badge: {
     backgroundColor: COLORS.surfaceContainerHighest,
@@ -263,8 +537,8 @@ const styles = StyleSheet.create({
   },
   featuredSection: {
     backgroundColor: COLORS.surfaceContainer,
-    margin: 24,
-    marginTop: 0,
+    marginHorizontal: 24,
+    marginBottom: 24,
     borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1,
@@ -272,10 +546,20 @@ const styles = StyleSheet.create({
   },
   featuredImage: {
     width: '100%',
-    height: 200,
+    height: 180,
+  },
+  featuredImagePlaceholder: {
+    backgroundColor: COLORS.surfaceContainerHigh,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderLetter: {
+    fontSize: 72,
+    color: 'rgba(212,175,55,0.2)',
+    fontFamily: 'MedievalSharp_400Regular',
   },
   featuredContent: {
-    padding: 24,
+    padding: 20,
   },
   featuredLabel: {
     color: COLORS.primaryContainer,
@@ -284,48 +568,69 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   featuredTitle: {
-    fontSize: 28,
+    fontSize: 26,
     color: COLORS.onSurface,
     fontWeight: 'bold',
-    marginBottom: 16,
+    marginBottom: 4,
     fontFamily: 'MedievalSharp_400Regular',
+  },
+  featuredAuthor: {
+    color: COLORS.onSurfaceVariant,
+    fontSize: 14,
+    fontStyle: 'italic',
+    marginBottom: 12,
   },
   featuredDesc: {
     color: COLORS.onSurfaceVariant,
-    fontSize: 16,
-    marginBottom: 24,
-    lineHeight: 24,
+    fontSize: 14,
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  featuredButtons: {
+    flexDirection: 'row',
+    gap: 12,
   },
   primaryButton: {
-    backgroundColor: COLORS.surfaceContainerHighest,
-    padding: 16,
+    backgroundColor: COLORS.primaryContainer,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 4,
-    alignSelf: 'flex-start',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   primaryButtonText: {
-    color: COLORS.primaryFixed,
+    color: '#241a00',
     fontWeight: 'bold',
     letterSpacing: 1,
+    fontSize: 13,
+  },
+  secondaryButton: {
+    backgroundColor: COLORS.surfaceContainerHighest,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+  },
+  secondaryButtonText: {
+    color: COLORS.primaryFixed,
+    fontWeight: 'bold',
+    fontSize: 13,
   },
   recentSection: {
-    padding: 24,
+    paddingHorizontal: 24,
   },
-  recentHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
+  recentHeaderStyle: {
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 24,
     color: COLORS.onSurface,
     fontWeight: 'bold',
     fontFamily: 'MedievalSharp_400Regular',
-  },
-  viewAllText: {
-    color: COLORS.primaryContainer,
-    fontSize: 12,
-    letterSpacing: 1,
+    marginBottom: 16,
   },
   grid: {
     flexDirection: 'row',
@@ -335,32 +640,283 @@ const styles = StyleSheet.create({
   gridItem: {
     width: '48%',
     backgroundColor: COLORS.surfaceContainerLow,
-    padding: 16,
+    padding: 12,
     borderRadius: 8,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.1)',
+  },
+  gridImage: {
+    aspectRatio: 0.75,
+    borderRadius: 4,
+    marginBottom: 8,
   },
   gridImagePlaceholder: {
     aspectRatio: 0.75,
     backgroundColor: COLORS.surfaceContainerHighest,
     borderRadius: 4,
-    marginBottom: 12,
+    marginBottom: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
   },
-  gridItemNumber: {
-    fontSize: 32,
-    color: 'rgba(212,175,55,0.4)',
+  gridItemLetter: {
+    fontSize: 40,
+    color: 'rgba(212,175,55,0.25)',
+    fontFamily: 'MedievalSharp_400Regular',
   },
   gridItemTitle: {
     color: COLORS.onSurface,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
-    marginBottom: 4,
-    fontFamily: 'Cinzel_700Bold',
+    marginBottom: 2,
+    fontFamily: 'MedievalSharp_400Regular',
   },
   gridItemSub: {
     color: COLORS.onSurfaceVariant,
+    fontSize: 11,
+    marginBottom: 8,
+  },
+  gridProgressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
+  gridProgressBarBg: {
+    flex: 1,
+    height: 6,
+    backgroundColor: COLORS.background,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  gridProgressBarFill: {
+    height: '100%',
+    backgroundColor: COLORS.primaryContainer,
+  },
+  gridProgressText: {
+    color: COLORS.onSurfaceVariant,
+    fontSize: 10,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: width * 0.9,
+    maxHeight: '80%',
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: COLORS.primaryContainer,
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: COLORS.surfaceContainerHighest,
+    borderBottomWidth: 1.5,
+    borderBottomColor: COLORS.primaryContainer,
+  },
+  modalHeaderTitle: {
+    fontSize: 18,
+    color: COLORS.primaryFixed,
+    fontWeight: 'bold',
+    fontFamily: 'MedievalSharp_400Regular',
+    letterSpacing: 1,
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalCloseText: {
+    color: COLORS.onSurfaceVariant,
+    fontSize: 18,
+  },
+  modalScroll: {
+    padding: 20,
+  },
+  modalBookCard: {
+    flexDirection: 'row',
+    marginBottom: 24,
+    gap: 16,
+  },
+  modalCover: {
+    width: 90,
+    height: 120,
+    borderRadius: 6,
+  },
+  modalCoverPlaceholder: {
+    width: 90,
+    height: 120,
+    backgroundColor: COLORS.surfaceContainerHighest,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+  },
+  modalCoverLetter: {
+    fontSize: 48,
+    color: 'rgba(212,175,55,0.3)',
+    fontFamily: 'MedievalSharp_400Regular',
+  },
+  modalBookDetails: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  modalTitle: {
+    fontSize: 20,
+    color: COLORS.onSurface,
+    fontWeight: 'bold',
+    marginBottom: 4,
+    fontFamily: 'MedievalSharp_400Regular',
+  },
+  modalAuthor: {
+    fontSize: 14,
+    color: COLORS.onSurfaceVariant,
+    fontStyle: 'italic',
+    marginBottom: 12,
+  },
+  modalMetaInfo: {
     fontSize: 12,
+    color: COLORS.onSurfaceVariant,
+    marginBottom: 2,
+  },
+  modalSection: {
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(212,175,55,0.1)',
+    paddingBottom: 16,
+  },
+  modalSectionLabel: {
+    fontSize: 11,
+    color: COLORS.primaryContainer,
+    fontWeight: 'bold',
+    letterSpacing: 2,
+    marginBottom: 10,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  starIcon: {
+    fontSize: 32,
+  },
+  starIconActive: {
+    color: COLORS.primaryContainer,
+  },
+  starIconInactive: {
+    color: COLORS.surfaceContainerHighest,
+  },
+  statusButtonGroup: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  statusSelectButton: {
+    backgroundColor: COLORS.surfaceContainer,
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 4,
+  },
+  statusSelectButtonActive: {
+    backgroundColor: 'rgba(212,175,55,0.15)',
+    borderColor: COLORS.primaryContainer,
+  },
+  statusSelectButtonText: {
+    color: COLORS.onSurfaceVariant,
+    fontSize: 10,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  statusSelectButtonActiveText: {
+    color: COLORS.primaryFixed,
+  },
+  progressEditRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  progressTextInput: {
+    backgroundColor: COLORS.surfaceContainer,
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    borderRadius: 4,
+    width: 70,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    color: COLORS.onSurface,
+    textAlign: 'center',
+    fontSize: 14,
+  },
+  progressSlash: {
+    color: COLORS.onSurfaceVariant,
+    fontSize: 16,
+  },
+  progressTotalText: {
+    color: COLORS.onSurfaceVariant,
+    fontSize: 14,
+    flex: 1,
+  },
+  applyProgressButton: {
+    backgroundColor: COLORS.surfaceContainerHighest,
+    borderWidth: 1,
+    borderColor: COLORS.primaryContainer,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 4,
+  },
+  applyProgressButtonText: {
+    color: COLORS.primaryFixed,
+    fontSize: 11,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  modalActionsRow: {
+    flexDirection: 'column',
+    gap: 12,
+    marginTop: 8,
+    paddingBottom: 20,
+  },
+  modalStartSessionButton: {
+    backgroundColor: COLORS.primaryContainer,
+    paddingVertical: 14,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: COLORS.primaryContainer,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  modalStartSessionText: {
+    color: '#241a00',
+    fontWeight: 'bold',
+    fontSize: 14,
+    letterSpacing: 1.5,
+  },
+  modalDeleteButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: COLORS.danger,
+    paddingVertical: 10,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalDeleteText: {
+    color: '#e57373',
+    fontWeight: 'bold',
+    fontSize: 12,
+    letterSpacing: 1,
   },
   bottomNav: {
     position: 'absolute',

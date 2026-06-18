@@ -13,6 +13,7 @@ export default function App() {
   const books = useBookStore((s) => s.books);
   const addBook = useBookStore((s) => s.addBook);
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('Library');
+  const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
 
   // Load custom fonts
   const [fontsLoaded] = useFonts({
@@ -69,19 +70,41 @@ export default function App() {
     );
   }
 
-  // A small wrapper to pass the navigation state down so we can change screens from the BottomNav
+  const handleStartSession = (bookId: string) => {
+    setSelectedBookId(bookId);
+    setCurrentScreen('Scripture');
+  };
+
   const renderScreen = () => {
     switch (currentScreen) {
       case 'Library':
-        return <LibraryScreen onNavigate={setCurrentScreen} />;
+        return (
+          <LibraryScreen 
+            onNavigate={setCurrentScreen} 
+            onStartSession={handleStartSession} 
+          />
+        );
       case 'Scripture':
-        return <ReadingSessionScreen onEndSession={() => setCurrentScreen('Library')} onNavigate={setCurrentScreen} />;
+        return (
+          <ReadingSessionScreen 
+            bookId={selectedBookId} 
+            onEndSession={() => {
+              setSelectedBookId(null);
+              setCurrentScreen('Library');
+            }} 
+            onNavigate={setCurrentScreen} 
+          />
+        );
       case 'Temple':
         return <ProfileScreen onNavigate={setCurrentScreen} />;
       case 'Scrolls':
       default:
-        // We don't have a specific Scrolls screen yet, fallback to Library
-        return <LibraryScreen onNavigate={setCurrentScreen} />;
+        return (
+          <LibraryScreen 
+            onNavigate={setCurrentScreen} 
+            onStartSession={handleStartSession} 
+          />
+        );
     }
   };
 
@@ -91,3 +114,4 @@ export default function App() {
     </ThemeProvider>
   );
 }
+

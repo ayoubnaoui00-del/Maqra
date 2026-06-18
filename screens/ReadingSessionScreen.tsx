@@ -13,8 +13,19 @@ import {
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
+import Reanimated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  useAnimatedProps, 
+  withTiming, 
+  withRepeat, 
+  withSequence, 
+  Easing as ReanimatedEasing 
+} from 'react-native-reanimated';
 import { useBookStore } from '../store/useBookStore';
 import { ScreenName } from '../App';
+
+const ReanimatedCircle = Reanimated.createAnimatedComponent(Circle);
 
 const COLORS = {
   background: '#131313',
@@ -64,19 +75,48 @@ export default function ReadingSessionScreen({
   const radius = 110;
   const strokeWidth = 10;
   const circumference = 2 * Math.PI * radius;
-  const progressAnim = useRef(new Animated.Value(0)).current;
+
+  // Reanimated values
+  const progressShared = useSharedValue(0);
+  const pulseValue = useSharedValue(1);
 
   // Initialize or update progress animation
   const bookProgress = activeBook ? (activeBook.currentPage / activeBook.totalPages) : 0;
 
   useEffect(() => {
-    Animated.timing(progressAnim, {
-      toValue: bookProgress,
+    progressShared.value = withTiming(bookProgress, {
       duration: 1000,
-      easing: Easing.bezier(0.4, 0, 0.2, 1),
-      useNativeDriver: true,
-    }).start();
+      easing: ReanimatedEasing.bezier(0.4, 0, 0.2, 1),
+    });
   }, [bookProgress]);
+
+  useEffect(() => {
+    if (!isTimerRunning) {
+      pulseValue.value = withRepeat(
+        withSequence(
+          withTiming(1.08, { duration: 1000, easing: ReanimatedEasing.ease }),
+          withTiming(1, { duration: 1000, easing: ReanimatedEasing.ease })
+        ),
+        -1,
+        true
+      );
+    } else {
+      pulseValue.value = withTiming(1, { duration: 300 });
+    }
+  }, [isTimerRunning]);
+
+  const animatedCircleProps = useAnimatedProps(() => {
+    const strokeDashoffset = circumference * (1 - progressShared.value);
+    return {
+      strokeDashoffset,
+    };
+  });
+
+  const animatedButtonStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: pulseValue.value }],
+    };
+  });
 
   // Clean up timer on unmount
   useEffect(() => {
@@ -202,12 +242,6 @@ export default function ReadingSessionScreen({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Dashoffset calculation for Animated Circle
-  const strokeDashoffset = progressAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [circumference, 0]
-  });
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -233,8 +267,8 @@ export default function ReadingSessionScreen({
           <View style={styles.centerSection}>
             <View style={styles.contextMeta}>
               <Text style={styles.metaLabel}>CURRENT SCRIPTURE</Text>
-              <Text style={styles.metaTitle} numberOfLines={1}>{activeBook.title}</Text>
-              <Text style={styles.metaAuthor}>by {activeBook.author}</Text>
+              <Text style={[styles.metaTitle, { textAlign: activeBook.language === 'ar' ? 'right' : 'left' }]} numberOfLines={1}>{activeBook.title}</Text>
+              <Text style={[styles.metaAuthor, { textAlign: activeBook.language === 'ar' ? 'right' : 'left' }]}>by {activeBook.author}</Text>
               <View style={styles.divider} />
             </View>
 
@@ -251,7 +285,7 @@ export default function ReadingSessionScreen({
                   fill="transparent"
                 />
                 {/* Foreground Progress Ring */}
-                <AnimatedCircle
+                <ReanimatedCircle
                   cx={125}
                   cy={125}
                   r={radius}
@@ -259,7 +293,7 @@ export default function ReadingSessionScreen({
                   strokeWidth={strokeWidth}
                   fill="transparent"
                   strokeDasharray={circumference}
-                  strokeDashoffset={strokeDashoffset}
+                  animatedProps={animatedCircleProps}
                   strokeLinecap="round"
                   transform="rotate(-90 125 125)"
                 />
@@ -284,9 +318,11 @@ export default function ReadingSessionScreen({
                 </TouchableOpacity>
               )}
 
-              <TouchableOpacity style={styles.playPauseButton} onPress={handleStartPause}>
-                <Text style={styles.playPauseIcon}>{isTimerRunning ? '⏸' : '▶'}</Text>
-              </TouchableOpacity>
+              <Reanimated.View style={animatedButtonStyle}>
+                <TouchableOpacity style={styles.playPauseButton} onPress={handleStartPause}>
+                  <Text style={styles.playPauseIcon}>{isTimerRunning ? '⏸' : '▶'}</Text>
+                </TouchableOpacity>
+              </Reanimated.View>
 
               {sessionId && (
                 <TouchableOpacity style={styles.controlButton} onPress={handleStopSession}>
@@ -517,7 +553,7 @@ const styles = StyleSheet.create({
     color: COLORS.primaryFixed,
     fontWeight: 'bold',
     letterSpacing: 2,
-    fontFamily: 'Cinzel_700Bold',
+    fontFamily: 'MedievalSharp_400Regular',
   },
   timeLabel: {
     fontSize: 10,

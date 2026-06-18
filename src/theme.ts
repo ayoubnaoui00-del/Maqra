@@ -2,18 +2,26 @@
 import { TextStyle, ViewStyle } from 'react-native';
 
 export const colors = {
-  primary: '#0052cc',
-  primaryContainer: '#0052cc',
-  secondary: '#e2725b',
-  tertiary: '#48bd91',
-  background: '#FCF9F7',
-  surface: '#f9f9fc',
-  onPrimary: '#ffffff',
-  onBackground: '#1a1c1e',
-  onSurface: '#1a1c1e',
-  error: '#ba1a1a',
+  background: '#131313',
+  primary: '#d4af37', // Gold
+  primaryContainer: '#d4af37',
+  primaryFixed: '#ffe088',
+  primaryFixedDim: '#e9c349',
+  secondary: '#ffe088',
+  tertiary: '#d0c5af',
+  surface: '#201f1f',
+  surfaceContainer: '#201f1f',
+  surfaceContainerLow: '#1c1b1b',
+  surfaceContainerHigh: '#2a2a2a',
+  surfaceContainerHighest: '#353534',
+  onPrimary: '#131313',
+  onBackground: '#e5e2e1',
+  onSurface: '#e5e2e1',
+  onSurfaceVariant: '#d0c5af',
+  outlineVariant: '#4d4635',
+  error: '#8f1d1d',
+  danger: '#8f1d1d',
   onError: '#ffffff',
-  // additional semantic colors
 };
 
 export const spacing = {
@@ -27,37 +35,38 @@ export const spacing = {
 
 export const typography = {
   displayLg: {
-    fontFamily: 'Be Vietnam Pro',
+    fontFamily: 'MedievalSharp_400Regular',
     fontSize: 32,
-    fontWeight: '700',
+    fontWeight: '400' as const,
     lineHeight: 40,
     letterSpacing: -0.02,
   },
   headlineMd: {
-    fontFamily: 'Be Vietnam Pro',
+    fontFamily: 'MedievalSharp_400Regular',
     fontSize: 24,
-    fontWeight: '600',
+    fontWeight: '400' as const,
     lineHeight: 32,
   },
   bodyLg: {
-    fontFamily: 'Be Vietnam Pro',
+    fontFamily: 'System',
     fontSize: 16,
-    fontWeight: '400',
+    fontWeight: '400' as const,
     lineHeight: 24,
   },
   bodyMd: {
-    fontFamily: 'Be Vietnam Pro',
+    fontFamily: 'System',
     fontSize: 14,
-    fontWeight: '400',
+    fontWeight: '400' as const,
     lineHeight: 20,
   },
   labelSm: {
-    fontFamily: 'Be Vietnam Pro',
+    fontFamily: 'System',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '600' as const,
     lineHeight: 16,
     letterSpacing: 0.05,
   },
 };
 
 export type Theme = typeof colors & typeof spacing & typeof typography;
+

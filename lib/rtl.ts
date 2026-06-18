@@ -6,17 +6,15 @@
  * This module provides utilities to configure and use RTL consistently.
  */
 
-import { I18nManager, Platform } from 'react-native';
+import { I18nManager } from 'react-native';
 
 /**
- * Call this at app startup to force RTL layout for Arabic.
- * Requires an app reload on iOS/Android to take effect.
+ * Configure RTL layout.
+ * Requires an app reload on iOS/Android to take effect persistency.
  */
-export function enableRTL(): void {
-  if (!I18nManager.isRTL) {
-    I18nManager.forceRTL(true);
-    I18nManager.allowRTL(true);
-  }
+export function setRTL(enable: boolean): void {
+  I18nManager.forceRTL(enable);
+  I18nManager.allowRTL(enable);
 }
 
 /**
@@ -27,15 +25,14 @@ export function isRTL(): boolean {
 }
 
 /**
- * Returns a text alignment value based on RTL state.
+ * Returns a text alignment value based on RTL state or book language.
  */
-export function getTextAlign(): 'right' | 'left' {
-  return I18nManager.isRTL ? 'right' : 'left';
+export function getTextAlign(isArabicBook?: boolean): 'right' | 'left' {
+  return (I18nManager.isRTL || isArabicBook) ? 'right' : 'left';
 }
 
 /**
  * Flips left/right padding/margin values for RTL.
- * Useful when you need to set asymmetric horizontal spacing.
  */
 export function flipHorizontal(ltr: number, rtl: number): number {
   return I18nManager.isRTL ? rtl : ltr;
@@ -43,13 +40,11 @@ export function flipHorizontal(ltr: number, rtl: number): number {
 
 /**
  * Returns a direction-aware flex row.
- * In RTL, row direction stays 'row' but React Native handles
- * the actual mirroring automatically when isRTL is true.
  */
-export const rowDirection = I18nManager.isRTL ? 'row-reverse' : 'row';
+export function getRowDirection(isArabicBook?: boolean): 'row' | 'row-reverse' {
+  return (I18nManager.isRTL || isArabicBook) ? 'row-reverse' : 'row';
+}
 
-/**
- * Use this to write text that requires explicit RTL/LTR marks.
- */
 export const RTL_MARK = '\u200F'; // RIGHT-TO-LEFT MARK
 export const LTR_MARK = '\u200E'; // LEFT-TO-RIGHT MARK
+

@@ -34,6 +34,7 @@ export interface UserProfile {
   avatarUri?: string;
   yearlyGoal: number; // target books per year
   joinedAt: string; // ISO date string
+  rtlEnabled?: boolean;
 }
 
 export interface ReadingStats {

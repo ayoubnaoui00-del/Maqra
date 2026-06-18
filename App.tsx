@@ -12,6 +12,7 @@ export type ScreenName = 'Library' | 'Scripture' | 'Scrolls' | 'Temple';
 export default function App() {
   const books = useBookStore((s) => s.books);
   const addBook = useBookStore((s) => s.addBook);
+  const profile = useBookStore((s) => s.profile);
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('Library');
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
 
@@ -19,6 +20,14 @@ export default function App() {
   const [fontsLoaded] = useFonts({
     MedievalSharp_400Regular,
   });
+
+  // Restore persistent RTL setting at launch
+  useEffect(() => {
+    if (profile && profile.rtlEnabled !== undefined) {
+      const { setRTL } = require('./lib/rtl');
+      setRTL(profile.rtlEnabled);
+    }
+  }, []);
 
   // Seed initial sample books for demonstration if empty
   useEffect(() => {

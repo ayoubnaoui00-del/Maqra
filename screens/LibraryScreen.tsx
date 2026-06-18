@@ -12,6 +12,7 @@ import {
   Dimensions,
   Alert
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useBookStore } from '../store/useBookStore';
 import { ScreenName } from '../App';
 import { Book, ReadingStatus } from '../types';
@@ -40,6 +41,7 @@ interface LibraryScreenProps {
 
 export default function LibraryScreen({ onNavigate, onStartSession }: LibraryScreenProps) {
   const books = useBookStore((s) => s.books);
+  const addBook = useBookStore((s) => s.addBook);
   const deleteBook = useBookStore((s) => s.deleteBook);
   const setBookStatus = useBookStore((s) => s.setBookStatus);
   const updateReadingProgress = useBookStore((s) => s.updateReadingProgress);
@@ -48,6 +50,14 @@ export default function LibraryScreen({ onNavigate, onStartSession }: LibraryScr
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [progressInput, setProgressInput] = useState('');
+
+  // Summon Modal State
+  const [showSummonModal, setShowSummonModal] = useState(false);
+  const [summonTitle, setSummonTitle] = useState('');
+  const [summonAuthor, setSummonAuthor] = useState('');
+  const [summonPages, setSummonPages] = useState('');
+  const [summonGenre, setSummonGenre] = useState('');
+  const [summonLanguage, setSummonLanguage] = useState('en');
 
   // Find the featured book (currently reading)
   const featuredBook = books.find(b => b.status === 'reading') || books[0];
@@ -99,6 +109,36 @@ export default function LibraryScreen({ onNavigate, onStartSession }: LibraryScr
     }
   };
 
+  const handleSummonScroll = () => {
+    if (!summonTitle.trim() || !summonAuthor.trim() || !summonPages.trim()) {
+      Alert.alert('Invalid Scroll', 'Title, Author, and Page Count must be provided.');
+      return;
+    }
+    const pagesVal = parseInt(summonPages, 10);
+    if (isNaN(pagesVal) || pagesVal <= 0) {
+      Alert.alert('Invalid Page Count', 'Please enter a valid page count.');
+      return;
+    }
+    
+    addBook({
+      title: summonTitle.trim(),
+      author: summonAuthor.trim(),
+      totalPages: pagesVal,
+      genre: summonGenre.trim() || 'General',
+      language: summonLanguage,
+    });
+
+    // Reset & close
+    setSummonTitle('');
+    setSummonAuthor('');
+    setSummonPages('');
+    setSummonGenre('');
+    setSummonLanguage('en');
+    setShowSummonModal(false);
+
+    Alert.alert('Scroll Summoned', 'A new manuscript has been added to your library.');
+  };
+
   const handleDeleteBook = () => {
     if (!selectedBook) return;
     Alert.alert(
@@ -139,8 +179,15 @@ export default function LibraryScreen({ onNavigate, onStartSession }: LibraryScr
 
         {/* Page Title */}
         <View style={styles.titleSection}>
-          <Text style={styles.pageTitle}>Library</Text>
-          <Text style={styles.pageSubtitle}>ANCIENT ARCHIVES</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View>
+              <Text style={styles.pageTitle}>Library</Text>
+              <Text style={styles.pageSubtitle}>ANCIENT ARCHIVES</Text>
+            </View>
+            <TouchableOpacity style={styles.summonButton} onPress={() => setShowSummonModal(true)}>
+              <Text style={styles.summonButtonText}>+ SUMMON</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.divider} />
         </View>
 
@@ -191,8 +238,8 @@ export default function LibraryScreen({ onNavigate, onStartSession }: LibraryScr
             )}
             <View style={styles.featuredContent}>
               <Text style={styles.featuredLabel}>CURRENTLY READING</Text>
-              <Text style={styles.featuredTitle}>{featuredBook.title}</Text>
-              <Text style={styles.featuredAuthor}>by {featuredBook.author}</Text>
+              <Text style={[styles.featuredTitle, { textAlign: featuredBook.language === 'ar' ? 'right' : 'left' }]}>{featuredBook.title}</Text>
+              <Text style={[styles.featuredAuthor, { textAlign: featuredBook.language === 'ar' ? 'right' : 'left' }]}>by {featuredBook.author}</Text>
               <Text style={styles.featuredDesc}>
                 Current progress: {featuredBook.currentPage} / {featuredBook.totalPages} pages ({Math.round((featuredBook.currentPage / featuredBook.totalPages) * 100)}%)
               </Text>
@@ -221,32 +268,49 @@ export default function LibraryScreen({ onNavigate, onStartSession }: LibraryScr
           </View>
 
           <View style={styles.grid}>
-            {filteredBooks.map((book) => {
-              const progressPct = Math.round((book.currentPage / book.totalPages) * 100);
-              return (
-                <TouchableOpacity 
-                  key={book.id} 
-                  style={styles.gridItem}
-                  onPress={() => openBookDetails(book)}
-                >
-                  {book.coverUri ? (
-                    <Image source={{ uri: book.coverUri }} style={styles.gridImage} />
-                  ) : (
-                    <View style={styles.gridImagePlaceholder}>
-                      <Text style={styles.gridItemLetter}>{book.title[0]}</Text>
-                    </View>
-                  )}
-                  <Text style={styles.gridItemTitle} numberOfLines={1}>{book.title}</Text>
-                  <Text style={styles.gridItemSub} numberOfLines={1}>{book.author}</Text>
-                  <View style={styles.gridProgressRow}>
-                    <View style={styles.gridProgressBarBg}>
-                      <View style={[styles.gridProgressBarFill, { width: `${progressPct}%` }]} />
-                    </View>
-                    <Text style={styles.gridProgressText}>{progressPct}%</Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
+            {filteredBooks.length > 0 ? (
+              filteredBooks.map((book, index) => {
+                const progressPct = Math.round((book.currentPage / book.totalPages) * 100);
+                return (
+                  <Animated.View 
+                    key={book.id}
+                    entering={FadeInDown.delay(index * 50).duration(400)}
+                    style={{ width: '48%', marginBottom: 16 }}
+                  >
+                    <TouchableOpacity 
+                      style={[styles.gridItem, { width: '100%', marginBottom: 0 }]}
+                      onPress={() => openBookDetails(book)}
+                    >
+                      {book.coverUri ? (
+                        <Image source={{ uri: book.coverUri }} style={styles.gridImage} />
+                      ) : (
+                        <View style={styles.gridImagePlaceholder}>
+                          <Text style={styles.gridItemLetter}>{book.title[0]}</Text>
+                        </View>
+                      )}
+                      <Text style={[styles.gridItemTitle, { textAlign: book.language === 'ar' ? 'right' : 'left' }]} numberOfLines={1}>{book.title}</Text>
+                      <Text style={[styles.gridItemSub, { textAlign: book.language === 'ar' ? 'right' : 'left' }]} numberOfLines={1}>{book.author}</Text>
+                      <View style={styles.gridProgressRow}>
+                        <View style={styles.gridProgressBarBg}>
+                          <View style={[styles.gridProgressBarFill, { width: `${progressPct}%` }]} />
+                        </View>
+                        <Text style={styles.gridProgressText}>{progressPct}%</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </Animated.View>
+                );
+              })
+            ) : (
+              <View style={styles.emptyStateContainer}>
+                <Text style={styles.emptyStateIcon}>📭</Text>
+                <Text style={styles.emptyStateTitle}>No Scrolls Found</Text>
+                <Text style={styles.emptyStateText}>
+                  {books.length === 0 
+                    ? "The archives are currently bare. Summon a new scroll to begin." 
+                    : "No manuscripts match your search query in these archives."}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -282,8 +346,8 @@ export default function LibraryScreen({ onNavigate, onStartSession }: LibraryScr
                     </View>
                   )}
                   <View style={styles.modalBookDetails}>
-                    <Text style={styles.modalTitle} numberOfLines={2}>{selectedBook.title}</Text>
-                    <Text style={styles.modalAuthor}>by {selectedBook.author}</Text>
+                    <Text style={[styles.modalTitle, { textAlign: selectedBook.language === 'ar' ? 'right' : 'left' }]} numberOfLines={2}>{selectedBook.title}</Text>
+                    <Text style={[styles.modalAuthor, { textAlign: selectedBook.language === 'ar' ? 'right' : 'left' }]}>by {selectedBook.author}</Text>
                     <Text style={styles.modalMetaInfo}>Language: {selectedBook.language?.toUpperCase() || 'EN'}</Text>
                     <Text style={styles.modalMetaInfo}>Total Leaves: {selectedBook.totalPages} pages</Text>
                   </View>
@@ -371,6 +435,106 @@ export default function LibraryScreen({ onNavigate, onStartSession }: LibraryScr
                   </TouchableOpacity>
                 </View>
 
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Summon Scroll Modal */}
+      {showSummonModal && (
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showSummonModal}
+          onRequestClose={() => setShowSummonModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalHeaderTitle}>Summon Scroll</Text>
+                <TouchableOpacity onPress={() => setShowSummonModal(false)} style={styles.modalCloseButton}>
+                  <Text style={styles.modalCloseText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView contentContainerStyle={styles.modalScroll}>
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionLabel}>SCROLL TITLE</Text>
+                  <TextInput
+                    style={styles.progressTextInputFull}
+                    placeholder="Enter manuscript title..."
+                    placeholderTextColor={COLORS.onSurfaceVariant}
+                    value={summonTitle}
+                    onChangeText={setSummonTitle}
+                  />
+                </View>
+
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionLabel}>AUTHOR / SCRIBE</Text>
+                  <TextInput
+                    style={styles.progressTextInputFull}
+                    placeholder="Enter scribe or author..."
+                    placeholderTextColor={COLORS.onSurfaceVariant}
+                    value={summonAuthor}
+                    onChangeText={setSummonAuthor}
+                  />
+                </View>
+
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionLabel}>TOTAL LEAVES (PAGES)</Text>
+                  <TextInput
+                    style={styles.progressTextInputFull}
+                    placeholder="e.g. 300"
+                    placeholderTextColor={COLORS.onSurfaceVariant}
+                    keyboardType="numeric"
+                    value={summonPages}
+                    onChangeText={setSummonPages}
+                  />
+                </View>
+
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionLabel}>GENRE / DISCIPLINE</Text>
+                  <TextInput
+                    style={styles.progressTextInputFull}
+                    placeholder="e.g. Philosophy, History..."
+                    placeholderTextColor={COLORS.onSurfaceVariant}
+                    value={summonGenre}
+                    onChangeText={setSummonGenre}
+                  />
+                </View>
+
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionLabel}>LANGUAGE</Text>
+                  <View style={styles.statusButtonGroup}>
+                    {['en', 'ar', 'fr'].map((lang) => (
+                      <TouchableOpacity
+                        key={lang}
+                        style={[
+                          styles.statusSelectButton,
+                          summonLanguage === lang && styles.statusSelectButtonActive
+                        ]}
+                        onPress={() => setSummonLanguage(lang)}
+                      >
+                        <Text style={[
+                          styles.statusSelectButtonText,
+                          summonLanguage === lang && styles.statusSelectButtonActiveText
+                        ]}>
+                          {lang.toUpperCase()}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.modalActionsRow}>
+                  <TouchableOpacity
+                    style={styles.modalStartSessionButton}
+                    onPress={handleSummonScroll}
+                  >
+                    <Text style={styles.modalStartSessionText}>✨ SEAL SCROLL</Text>
+                  </TouchableOpacity>
+                </View>
               </ScrollView>
             </View>
           </View>
@@ -953,5 +1117,57 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
     opacity: 0.5,
+  },
+  summonButton: {
+    backgroundColor: COLORS.primaryContainer,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 4,
+  },
+  summonButtonText: {
+    color: '#241a00',
+    fontSize: 11,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  progressTextInputFull: {
+    backgroundColor: COLORS.surfaceContainer,
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    borderRadius: 4,
+    width: '100%',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    color: COLORS.onSurface,
+    fontSize: 14,
+  },
+  emptyStateContainer: {
+    width: '100%',
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.15)',
+    borderRadius: 8,
+    padding: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  emptyStateIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+    opacity: 0.8,
+  },
+  emptyStateTitle: {
+    color: COLORS.primaryFixed,
+    fontSize: 18,
+    fontWeight: 'bold',
+    fontFamily: 'MedievalSharp_400Regular',
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    color: COLORS.onSurfaceVariant,
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });

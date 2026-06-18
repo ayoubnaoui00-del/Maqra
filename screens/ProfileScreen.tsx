@@ -10,20 +10,22 @@ import {
   Switch, 
   Alert,
   TextInput,
-  Animated,
-  Easing,
   Platform
 } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing as ReanimatedEasing, FadeInDown } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
 import { useBookStore } from '../store/useBookStore';
 import { ScreenName } from '../App';
 import { formatDate } from '../lib/date';
+import { setRTL } from '../lib/rtl';
 
 const COLORS = {
   background: '#131313',
   primaryContainer: '#d4af37', // Gold
   primaryFixed: '#ffe088',
   primaryFixedDim: '#e9c349',
+  secondary: '#ffe088',
+  tertiary: '#d0c5af',
   surfaceContainer: '#201f1f',
   surfaceContainerLow: '#1c1b1b',
   surfaceContainerHigh: '#2a2a2a',
@@ -41,12 +43,10 @@ export default function ProfileScreen({ onNavigate }: { onNavigate?: (screen: Sc
 
   const [publicLedger, setPublicLedger] = useState(true);
   const [ritualNotifs, setRitualNotifs] = useState(false);
+  const [rtlEnabled, setRtlEnabled] = useState(profile.rtlEnabled || false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(profile.name || 'Grand Scholar');
   const [yearlyGoalInput, setYearlyGoalInput] = useState(profile.yearlyGoal.toString());
-
-  // Animations for Chart Bars
-  const animValues = useRef<Animated.Value[]>([]).current;
 
   // Compute Stats
   const completedBooksCount = books.filter(b => b.status === 'completed').length;
@@ -95,27 +95,7 @@ export default function ProfileScreen({ onNavigate }: { onNavigate?: (screen: Sc
 
   const monthlyData = getMonthlyStats();
 
-  // Initialize and run bar animations
-  useEffect(() => {
-    // Re-create animations if needed
-    animValues.length = 0;
-    monthlyData.forEach(() => {
-      animValues.push(new Animated.Value(0));
-    });
 
-    const animations = monthlyData.map((data, index) => {
-      // Scale heights: max is 5 books = 100% height (120px)
-      const targetVal = Math.min(1.2, data.count * 0.2); 
-      return Animated.timing(animValues[index], {
-        toValue: targetVal,
-        duration: 800,
-        easing: Easing.bezier(0.4, 0, 0.2, 1),
-        useNativeDriver: false // Layout heights don't support native driver
-      });
-    });
-
-    Animated.parallel(animations).start();
-  }, [books]);
 
   const handlePickAvatar = async () => {
     Alert.alert(
@@ -175,6 +155,17 @@ export default function ProfileScreen({ onNavigate }: { onNavigate?: (screen: Sc
     });
     setIsEditingName(false);
     Alert.alert('Profile Sealed', 'Your profile details have been sealed.');
+  };
+
+  const handleToggleRTL = (value: boolean) => {
+    setRtlEnabled(value);
+    updateProfile({ rtlEnabled: value });
+    setRTL(value);
+    Alert.alert(
+      'Layout Mirroring',
+      'The layout mirroring setting has been updated. Please reload the application to apply the shift fully.',
+      [{ text: 'Acknowledged' }]
+    );
   };
 
   return (
@@ -276,21 +267,9 @@ export default function ProfileScreen({ onNavigate }: { onNavigate?: (screen: Sc
           </View>
           <View style={styles.chartContainer}>
             <View style={styles.barsRow}>
-              {monthlyData.map((data, index) => {
-                const heightStyle = animValues[index] ? animValues[index].interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, 100] // Max height of 100px
-                }) : 0;
-                return (
-                  <View key={index} style={styles.chartBarColumn}>
-                    <Text style={styles.chartBarValue}>{data.count}</Text>
-                    <View style={styles.barTrack}>
-                      <Animated.View style={[styles.barFill, { height: heightStyle }]} />
-                    </View>
-                    <Text style={styles.chartBarLabel}>{data.label}</Text>
-                  </View>
-                );
-              })}
+              {monthlyData.map((data, index) => (
+                <ChartBar key={index} label={data.label} count={data.count} />
+              ))}
             </View>
           </View>
         </View>
@@ -308,7 +287,11 @@ export default function ProfileScreen({ onNavigate }: { onNavigate?: (screen: Sc
                 const book = books.find(b => b.id === session.bookId);
                 const sessionDate = formatDate(new Date(session.startTime));
                 return (
-                  <View key={session.id || index} style={styles.historyItem}>
+                  <Animated.View 
+                    key={session.id || index} 
+                    entering={FadeInDown.delay(index * 100).duration(450)}
+                    style={styles.historyItem}
+                  >
                     <View style={styles.historyItemIcon}>
                       <Text style={styles.historyBookIcon}>📖</Text>
                     </View>
@@ -319,7 +302,7 @@ export default function ProfileScreen({ onNavigate }: { onNavigate?: (screen: Sc
                       </Text>
                     </View>
                     <Text style={styles.historyDate}>{sessionDate}</Text>
-                  </View>
+                  </Animated.View>
                 );
               })
             ) : (
@@ -362,6 +345,19 @@ export default function ProfileScreen({ onNavigate }: { onNavigate?: (screen: Sc
               thumbColor={COLORS.outlineVariant || '#353534'}
             />
           </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingTitle}>Arabic RTL Layout</Text>
+              <Text style={styles.settingDesc}>Mirror layout structure for right-to-left scripts.</Text>
+            </View>
+            <Switch 
+              value={rtlEnabled} 
+              onValueChange={handleToggleRTL} 
+              trackColor={{ false: COLORS.surfaceContainerHighest, true: COLORS.primaryFixedDim }}
+              thumbColor={COLORS.primaryContainer}
+            />
+          </View>
         </View>
       </ScrollView>
 
@@ -394,6 +390,35 @@ function AttributeCard({ icon, label, value }: { icon: string, label: string, va
       <Text style={styles.attributeIcon}>{icon}</Text>
       <Text style={styles.attributeLabel}>{label}</Text>
       <Text style={styles.attributeValue}>{value}</Text>
+    </View>
+  );
+}
+
+function ChartBar({ label, count }: { label: string; count: number }) {
+  const heightProgress = useSharedValue(0);
+
+  useEffect(() => {
+    // Scale heights: max is 5 books = 100% height (100px)
+    const targetHeight = Math.min(100, count * 20);
+    heightProgress.value = withTiming(targetHeight, {
+      duration: 800,
+      easing: ReanimatedEasing.bezier(0.4, 0, 0.2, 1),
+    });
+  }, [count]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      height: heightProgress.value,
+    };
+  });
+
+  return (
+    <View style={styles.chartBarColumn}>
+      <Text style={styles.chartBarValue}>{count}</Text>
+      <View style={styles.barTrack}>
+        <Animated.View style={[styles.barFill, animatedStyle]} />
+      </View>
+      <Text style={styles.chartBarLabel}>{label}</Text>
     </View>
   );
 }

@@ -16,6 +16,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useBookStore } from '../store/useBookStore';
 import { ScreenName } from '../App';
 import { Book, ReadingStatus } from '../types';
+import * as ImagePicker from 'expo-image-picker';
 
 const { width } = Dimensions.get('window');
 
@@ -46,6 +47,7 @@ export default function LibraryScreen({ onNavigate, onStartSession }: LibraryScr
   const setBookStatus = useBookStore((s) => s.setBookStatus);
   const updateReadingProgress = useBookStore((s) => s.updateReadingProgress);
   const rateBook = useBookStore((s) => s.rateBook);
+  const updateBook = useBookStore((s) => s.updateBook);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
@@ -58,6 +60,7 @@ export default function LibraryScreen({ onNavigate, onStartSession }: LibraryScr
   const [summonPages, setSummonPages] = useState('');
   const [summonGenre, setSummonGenre] = useState('');
   const [summonLanguage, setSummonLanguage] = useState('en');
+  const [summonCoverUri, setSummonCoverUri] = useState<string | null>(null);
 
   // Find the featured book (currently reading)
   const featuredBook = books.find(b => b.status === 'reading') || books[0];
@@ -126,6 +129,7 @@ export default function LibraryScreen({ onNavigate, onStartSession }: LibraryScr
       totalPages: pagesVal,
       genre: summonGenre.trim() || 'General',
       language: summonLanguage,
+      coverUri: summonCoverUri || undefined,
     });
 
     // Reset & close
@@ -134,9 +138,80 @@ export default function LibraryScreen({ onNavigate, onStartSession }: LibraryScr
     setSummonPages('');
     setSummonGenre('');
     setSummonLanguage('en');
+    setSummonCoverUri(null);
     setShowSummonModal(false);
 
     Alert.alert('Scroll Summoned', 'A new manuscript has been added to your library.');
+  };
+
+  const handlePickCover = async (isSummon: boolean) => {
+    Alert.alert(
+      'Attach Manuscript Cover',
+      'Select a source for your book cover image:',
+      [
+        {
+          text: 'Take Photo (Camera)',
+          onPress: async () => {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert(
+                'Permission Denied',
+                'Camera access is required to capture manuscript covers. Please enable camera access in settings.'
+              );
+              return;
+            }
+            const result = await ImagePicker.launchCameraAsync({
+              allowsEditing: true,
+              aspect: [3, 4],
+              quality: 0.8,
+            });
+            if (!result.canceled && result.assets && result.assets[0].uri) {
+              const uri = result.assets[0].uri;
+              if (isSummon) {
+                setSummonCoverUri(uri);
+              } else if (selectedBook) {
+                updateBook(selectedBook.id, { coverUri: uri });
+                const updated = useBookStore.getState().books.find(b => b.id === selectedBook.id);
+                if (updated) {
+                  setSelectedBook(updated);
+                }
+              }
+            }
+          }
+        },
+        {
+          text: 'Select Portrait (Library)',
+          onPress: async () => {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert(
+                'Permission Denied',
+                'Media library access is required to select book covers. Please enable photo access in settings.'
+              );
+              return;
+            }
+            const result = await ImagePicker.launchImageLibraryAsync({
+              allowsEditing: true,
+              aspect: [3, 4],
+              quality: 0.8,
+            });
+            if (!result.canceled && result.assets && result.assets[0].uri) {
+              const uri = result.assets[0].uri;
+              if (isSummon) {
+                setSummonCoverUri(uri);
+              } else if (selectedBook) {
+                updateBook(selectedBook.id, { coverUri: uri });
+                const updated = useBookStore.getState().books.find(b => b.id === selectedBook.id);
+                if (updated) {
+                  setSelectedBook(updated);
+                }
+              }
+            }
+          }
+        },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
   };
 
   const handleDeleteBook = () => {
@@ -338,13 +413,24 @@ export default function LibraryScreen({ onNavigate, onStartSession }: LibraryScr
                 
                 {/* Book Meta Card */}
                 <View style={styles.modalBookCard}>
-                  {selectedBook.coverUri ? (
-                    <Image source={{ uri: selectedBook.coverUri }} style={styles.modalCover} />
-                  ) : (
-                    <View style={styles.modalCoverPlaceholder}>
-                      <Text style={styles.modalCoverLetter}>{selectedBook.title[0]}</Text>
+                  <TouchableOpacity 
+                    onPress={() => handlePickCover(false)} 
+                    activeOpacity={0.75}
+                    style={styles.modalCoverTouchable}
+                  >
+                    <View style={styles.modalCoverWrapper}>
+                      {selectedBook.coverUri ? (
+                        <Image source={{ uri: selectedBook.coverUri }} style={styles.modalCover} />
+                      ) : (
+                        <View style={styles.modalCoverPlaceholder}>
+                          <Text style={styles.modalCoverLetter}>{selectedBook.title[0]}</Text>
+                        </View>
+                      )}
+                      <View style={styles.coverEditBadge}>
+                        <Text style={styles.coverEditBadgeText}>✎</Text>
+                      </View>
                     </View>
-                  )}
+                  </TouchableOpacity>
                   <View style={styles.modalBookDetails}>
                     <Text style={[styles.modalTitle, { textAlign: selectedBook.language === 'ar' ? 'right' : 'left' }]} numberOfLines={2}>{selectedBook.title}</Text>
                     <Text style={[styles.modalAuthor, { textAlign: selectedBook.language === 'ar' ? 'right' : 'left' }]}>by {selectedBook.author}</Text>
@@ -502,6 +588,41 @@ export default function LibraryScreen({ onNavigate, onStartSession }: LibraryScr
                     value={summonGenre}
                     onChangeText={setSummonGenre}
                   />
+                </View>
+
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionLabel}>MANUSCRIPT COVER</Text>
+                  <View style={styles.summonCoverRow}>
+                    {summonCoverUri ? (
+                      <View style={styles.summonCoverPreviewContainer}>
+                        <Image source={{ uri: summonCoverUri }} style={styles.summonCoverPreview} />
+                        <TouchableOpacity 
+                          style={styles.summonCoverRemoveBtn} 
+                          onPress={() => setSummonCoverUri(null)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.summonCoverRemoveText}>✕</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <TouchableOpacity 
+                        style={styles.summonCoverPlaceholder}
+                        onPress={() => handlePickCover(true)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.summonCoverPlaceholderText}>📷 Attach Cover Portrait</Text>
+                      </TouchableOpacity>
+                    )}
+                    {summonCoverUri && (
+                      <TouchableOpacity 
+                        style={styles.summonCoverChangeBtn}
+                        onPress={() => handlePickCover(true)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.summonCoverChangeBtnText}>Change Cover</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
 
                 <View style={styles.modalSection}>
@@ -1170,4 +1291,96 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
+  modalCoverTouchable: {
+    alignSelf: 'flex-start',
+  },
+  modalCoverWrapper: {
+    position: 'relative',
+    width: 90,
+    height: 120,
+  },
+  coverEditBadge: {
+    position: 'absolute',
+    bottom: -6,
+    right: -6,
+    backgroundColor: COLORS.primaryContainer,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.surfaceContainer,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  coverEditBadgeText: {
+    color: COLORS.background,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  summonCoverRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  summonCoverPlaceholder: {
+    flex: 1,
+    height: 50,
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: COLORS.outlineVariant,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  summonCoverPlaceholderText: {
+    color: COLORS.onSurfaceVariant,
+    fontSize: 14,
+    fontFamily: 'MedievalSharp_400Regular',
+  },
+  summonCoverPreviewContainer: {
+    position: 'relative',
+    width: 75,
+    height: 100,
+  },
+  summonCoverPreview: {
+    width: 75,
+    height: 100,
+    borderRadius: 6,
+  },
+  summonCoverRemoveBtn: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: COLORS.danger,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  summonCoverRemoveText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  summonCoverChangeBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: COLORS.surfaceContainerHigh,
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+  },
+  summonCoverChangeBtnText: {
+    color: COLORS.primaryFixed,
+    fontSize: 14,
+    fontFamily: 'MedievalSharp_400Regular',
+  },
 });
+

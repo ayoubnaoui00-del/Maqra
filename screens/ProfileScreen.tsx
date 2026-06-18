@@ -6,12 +6,12 @@ import {
   ScrollView, 
   TouchableOpacity, 
   Image, 
-  SafeAreaView, 
   Switch, 
   Alert,
   TextInput,
   Platform
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing as ReanimatedEasing, FadeInDown } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
 import { useBookStore } from '../store/useBookStore';

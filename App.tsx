@@ -6,6 +6,7 @@ import ProfileScreen from './screens/ProfileScreen';
 import ReadingSessionScreen from './screens/ReadingSessionScreen';
 import { ThemeProvider } from './src/theme/ThemeContext';
 import { useFonts, MedievalSharp_400Regular } from '@expo-google-fonts/medievalsharp';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export type ScreenName = 'Library' | 'Scripture' | 'Scrolls' | 'Temple';
 
@@ -118,9 +119,11 @@ export default function App() {
   };
 
   return (
-    <ThemeProvider>
-      {renderScreen()}
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        {renderScreen()}
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
 

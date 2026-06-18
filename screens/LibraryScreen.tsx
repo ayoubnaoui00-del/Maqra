@@ -6,12 +6,12 @@ import {
   ScrollView, 
   TouchableOpacity, 
   Image, 
-  SafeAreaView, 
   Modal, 
   TextInput,
   Dimensions,
   Alert
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useBookStore } from '../store/useBookStore';
 import { ScreenName } from '../App';

@@ -1,9 +1,27 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, SafeAreaView, Switch } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  TouchableOpacity, 
+  Image, 
+  SafeAreaView, 
+  Switch, 
+  Alert,
+  TextInput,
+  Animated,
+  Easing,
+  Platform
+} from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { useBookStore } from '../store/useBookStore';
+import { ScreenName } from '../App';
+import { formatDate } from '../lib/date';
 
 const COLORS = {
   background: '#131313',
-  primaryContainer: '#d4af37',
+  primaryContainer: '#d4af37', // Gold
   primaryFixed: '#ffe088',
   primaryFixedDim: '#e9c349',
   surfaceContainer: '#201f1f',
@@ -15,11 +33,149 @@ const COLORS = {
   outlineVariant: '#4d4635',
 };
 
-import { ScreenName } from '../App';
-
 export default function ProfileScreen({ onNavigate }: { onNavigate?: (screen: ScreenName) => void }) {
+  const profile = useBookStore((s) => s.profile);
+  const updateProfile = useBookStore((s) => s.updateProfile);
+  const sessions = useBookStore((s) => s.sessions);
+  const books = useBookStore((s) => s.books);
+
   const [publicLedger, setPublicLedger] = useState(true);
   const [ritualNotifs, setRitualNotifs] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState(profile.name || 'Grand Scholar');
+  const [yearlyGoalInput, setYearlyGoalInput] = useState(profile.yearlyGoal.toString());
+
+  // Animations for Chart Bars
+  const animValues = useRef<Animated.Value[]>([]).current;
+
+  // Compute Stats
+  const completedBooksCount = books.filter(b => b.status === 'completed').length;
+  
+  // Total Pages read from session history
+  const totalPagesConsumed = sessions.reduce((acc, s) => acc + s.pagesRead, 0);
+
+  // Total time spent reading (seconds)
+  const totalReadingSeconds = sessions.reduce((acc, s) => acc + s.durationSeconds, 0);
+  const totalReadingHours = (totalReadingSeconds / 3600).toFixed(1);
+
+  // Calculate Streak
+  const currentStreak = useBookStore((s) => s.getCurrentStreak());
+
+  // Dynamic Gamified Attributes
+  // ZEAL: based on streak
+  const zeal = Math.min(99, Math.max(10, currentStreak * 15 + 10));
+  // INSIGHT: based on pages deciphered
+  const insight = Math.min(99, Math.max(10, Math.round((totalPagesConsumed / 100) * 8 + 15)));
+  // PATIENCE: average session duration in minutes (target 30m = max patience)
+  const totalSessions = sessions.length;
+  const avgSessionMin = totalSessions > 0 ? (totalReadingSeconds / totalSessions) / 60 : 0;
+  const patience = Math.min(99, Math.max(10, Math.round((avgSessionMin / 30) * 60 + 20)));
+  // AUTHORITY: based on completed books
+  const authority = Math.min(99, Math.max(10, completedBooksCount * 15 + 25));
+
+  // Compute monthly data for chart (last 6 months)
+  const getMonthlyStats = () => {
+    const months = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const label = d.toLocaleString('en-US', { month: 'short' });
+      const yearMonthKey = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+      
+      // Count completed books in this month
+      const count = books.filter(b => {
+        if (!b.completedAt || b.status !== 'completed') return false;
+        return b.completedAt.startsWith(yearMonthKey);
+      }).length;
+      
+      months.push({ label, count });
+    }
+    return months;
+  };
+
+  const monthlyData = getMonthlyStats();
+
+  // Initialize and run bar animations
+  useEffect(() => {
+    // Re-create animations if needed
+    animValues.length = 0;
+    monthlyData.forEach(() => {
+      animValues.push(new Animated.Value(0));
+    });
+
+    const animations = monthlyData.map((data, index) => {
+      // Scale heights: max is 5 books = 100% height (120px)
+      const targetVal = Math.min(1.2, data.count * 0.2); 
+      return Animated.timing(animValues[index], {
+        toValue: targetVal,
+        duration: 800,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
+        useNativeDriver: false // Layout heights don't support native driver
+      });
+    });
+
+    Animated.parallel(animations).start();
+  }, [books]);
+
+  const handlePickAvatar = async () => {
+    Alert.alert(
+      'Update Avatar',
+      'Select a source for your scholar portrait:',
+      [
+        {
+          text: 'Take Portrait (Camera)',
+          onPress: async () => {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert('Permission Denied', 'Camera access is required to take portraits.');
+              return;
+            }
+            const result = await ImagePicker.launchCameraAsync({
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.8,
+            });
+            if (!result.canceled && result.assets && result.assets[0].uri) {
+              updateProfile({ avatarUri: result.assets[0].uri });
+            }
+          }
+        },
+        {
+          text: 'Select Portrait (Library)',
+          onPress: async () => {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert('Permission Denied', 'Media library access is required to select portraits.');
+              return;
+            }
+            const result = await ImagePicker.launchImageLibraryAsync({
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.8,
+            });
+            if (!result.canceled && result.assets && result.assets[0].uri) {
+              updateProfile({ avatarUri: result.assets[0].uri });
+            }
+          }
+        },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const saveProfileDetails = () => {
+    const goalNum = parseInt(yearlyGoalInput, 10);
+    if (isNaN(goalNum) || goalNum <= 0) {
+      Alert.alert('Invalid Goal', 'Please enter a valid yearly goal.');
+      return;
+    }
+    updateProfile({
+      name: nameInput,
+      yearlyGoal: goalNum,
+    });
+    setIsEditingName(false);
+    Alert.alert('Profile Sealed', 'Your profile details have been sealed.');
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -29,7 +185,7 @@ export default function ProfileScreen({ onNavigate }: { onNavigate?: (screen: Sc
           <Text style={styles.iconText}>☰</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>MAQRA</Text>
-        <TouchableOpacity style={styles.iconButton}>
+        <TouchableOpacity style={styles.iconButton} onPress={() => onNavigate?.('Temple')}>
           <Text style={styles.iconTextActive}>👤</Text>
         </TouchableOpacity>
       </View>
@@ -37,16 +193,48 @@ export default function ProfileScreen({ onNavigate }: { onNavigate?: (screen: Sc
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
         {/* Eminence Level Profile Section */}
         <View style={styles.profileSection}>
-          <View style={styles.avatarContainer}>
-            <Image 
-              source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA7dlgLaj3QGNTI_poZ4yciSGfzquwVXs1_24IlKyP2qd4I-k1E4wmWXoPBZ9wUbXspEZ5QTwakAeaE1n74F2L9jBE1LetF3qLuuorG_NhqqobQjyJCiQSsx0LUYaUNcC1oMkH9e76ErS7FkyEbPKIyKLj5ncH3VJO5eVVdJg39xK7qTzwMLr7Ggng03W4RG9_XkHugN12cpTUDgKuBvtLjfTv4xhxvxtE-fKsVM0Hmf0FZhQwyC1op08S3mkXrnXB4ZZlZl5xjWRgZ' }} 
-              style={styles.avatarImage} 
-            />
+          <TouchableOpacity style={styles.avatarContainer} onPress={handlePickAvatar}>
+            {profile.avatarUri ? (
+              <Image source={{ uri: profile.avatarUri }} style={styles.avatarImage} />
+            ) : (
+              <Image 
+                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA7dlgLaj3QGNTI_poZ4yciSGfzquwVXs1_24IlKyP2qd4I-k1E4wmWXoPBZ9wUbXspEZ5QTwakAeaE1n74F2L9jBE1LetF3qLuuorG_NhqqobQjyJCiQSsx0LUYaUNcC1oMkH9e76ErS7FkyEbPKIyKLj5ncH3VJO5eVVdJg39xK7qTzwMLr7Ggng03W4RG9_XkHugN12cpTUDgKuBvtLjfTv4xhxvxtE-fKsVM0Hmf0FZhQwyC1op08S3mkXrnXB4ZZlZl5xjWRgZ' }} 
+                style={styles.avatarImage} 
+              />
+            )}
             <View style={styles.levelBadge}>
-              <Text style={styles.levelText}>LEVEL 42</Text>
+              <Text style={styles.levelText}>GOAL: {profile.yearlyGoal}</Text>
             </View>
-          </View>
-          <Text style={styles.eminenceTitle}>Eminence Level</Text>
+          </TouchableOpacity>
+          
+          {isEditingName ? (
+            <View style={styles.nameEditRow}>
+              <TextInput
+                style={styles.nameTextInput}
+                value={nameInput}
+                onChangeText={setNameInput}
+                placeholder="Scholar Name"
+                placeholderTextColor={COLORS.onSurfaceVariant}
+              />
+              <TextInput
+                style={styles.goalTextInput}
+                value={yearlyGoalInput}
+                onChangeText={setYearlyGoalInput}
+                keyboardType="numeric"
+                placeholder="Goal"
+                placeholderTextColor={COLORS.onSurfaceVariant}
+              />
+              <TouchableOpacity style={styles.saveProfileButton} onPress={saveProfileDetails}>
+                <Text style={styles.saveProfileButtonText}>✓</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={() => setIsEditingName(true)} style={styles.nameDisplayRow}>
+              <Text style={styles.eminenceTitle}>{profile.name || 'Grand Scholar'}</Text>
+              <Text style={styles.editPen}>✏️</Text>
+            </TouchableOpacity>
+          )}
+          
           <Text style={styles.eminenceSubtitle}>Grand Scholar of the First Order</Text>
         </View>
 
@@ -57,10 +245,10 @@ export default function ProfileScreen({ onNavigate }: { onNavigate?: (screen: Sc
             <Text style={styles.sectionTitle}>CORE ATTRIBUTES</Text>
           </View>
           <View style={styles.attributesGrid}>
-            <AttributeCard icon="🔥" label="ZEAL" value="87" />
-            <AttributeCard icon="👁️" label="INSIGHT" value="92" />
-            <AttributeCard icon="⏳" label="PATIENCE" value="64" />
-            <AttributeCard icon="⚖️" label="AUTHORITY" value="78" />
+            <AttributeCard icon="🔥" label="ZEAL" value={zeal.toString()} />
+            <AttributeCard icon="👁️" label="INSIGHT" value={insight.toString()} />
+            <AttributeCard icon="⏳" label="PATIENCE" value={patience.toString()} />
+            <AttributeCard icon="⚖️" label="AUTHORITY" value={authority.toString()} />
           </View>
         </View>
 
@@ -69,14 +257,76 @@ export default function ProfileScreen({ onNavigate }: { onNavigate?: (screen: Sc
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>WISDOM TIME</Text>
-              <Text style={styles.statValue}>4,280 h</Text>
+              <Text style={styles.statValue}>{totalReadingHours} h</Text>
               <Text style={styles.statDesc}>Hours spent in deep contemplation and study of the ancient texts.</Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>PAGES CONSUMED</Text>
-              <Text style={styles.statValue}>12,405</Text>
+              <Text style={styles.statValue}>{totalPagesConsumed}</Text>
               <Text style={styles.statDesc}>Leaves of knowledge absorbed into the grand repository of mind.</Text>
             </View>
+          </View>
+        </View>
+
+        {/* Custom Monthly Activity Chart */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionIcon}>📊</Text>
+            <Text style={styles.sectionTitle}>MONTHLY DECIPHERMENT</Text>
+          </View>
+          <View style={styles.chartContainer}>
+            <View style={styles.barsRow}>
+              {monthlyData.map((data, index) => {
+                const heightStyle = animValues[index] ? animValues[index].interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 100] // Max height of 100px
+                }) : 0;
+                return (
+                  <View key={index} style={styles.chartBarColumn}>
+                    <Text style={styles.chartBarValue}>{data.count}</Text>
+                    <View style={styles.barTrack}>
+                      <Animated.View style={[styles.barFill, { height: heightStyle }]} />
+                    </View>
+                    <Text style={styles.chartBarLabel}>{data.label}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+
+        {/* Study History Session List */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionIcon}>📜</Text>
+            <Text style={styles.sectionTitle}>STUDY CHRONICLES</Text>
+          </View>
+          
+          <View style={styles.historyList}>
+            {sessions.length > 0 ? (
+              sessions.slice(0, 5).map((session, index) => {
+                const book = books.find(b => b.id === session.bookId);
+                const sessionDate = formatDate(new Date(session.startTime));
+                return (
+                  <View key={session.id || index} style={styles.historyItem}>
+                    <View style={styles.historyItemIcon}>
+                      <Text style={styles.historyBookIcon}>📖</Text>
+                    </View>
+                    <View style={styles.historyItemContent}>
+                      <Text style={styles.historyTitle}>{book?.title || 'Unknown Text'}</Text>
+                      <Text style={styles.historyMeta}>
+                        Read {session.pagesRead} pages in {Math.round(session.durationSeconds / 60)}m
+                      </Text>
+                    </View>
+                    <Text style={styles.historyDate}>{sessionDate}</Text>
+                  </View>
+                );
+              })
+            ) : (
+              <View style={styles.emptyHistory}>
+                <Text style={styles.emptyHistoryText}>No study chronicles recorded yet.</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -112,14 +362,10 @@ export default function ProfileScreen({ onNavigate }: { onNavigate?: (screen: Sc
               thumbColor={COLORS.outlineVariant || '#353534'}
             />
           </View>
-
-          <TouchableOpacity style={styles.sealButton}>
-            <Text style={styles.sealButtonText}>SEAL CHANGES</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
 
-      {/* Bottom Nav Placeholder */}
+      {/* Bottom Nav */}
       <View style={styles.bottomNav}>
         <TouchableOpacity style={styles.navItem} onPress={() => onNavigate?.('Library')}>
           <Text style={styles.navIcon}>📚</Text>
@@ -189,61 +435,114 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 24,
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
   profileSection: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 32,
   },
   avatarContainer: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    borderWidth: 2,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    borderWidth: 2.5,
     borderColor: COLORS.primaryContainer,
     backgroundColor: COLORS.surfaceContainer,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
     position: 'relative',
   },
   avatarImage: {
-    width: 148,
-    height: 148,
-    borderRadius: 74,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
   },
   levelBadge: {
     position: 'absolute',
-    bottom: -10,
+    bottom: -8,
     backgroundColor: COLORS.surfaceContainerHigh,
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 3,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: COLORS.primaryContainer,
   },
   levelText: {
-    color: COLORS.primaryFixedDim, // #e9c349 in palette mapping to 'primary' in their HTML
-    fontSize: 12,
-    letterSpacing: 2,
+    color: COLORS.primaryFixedDim,
+    fontSize: 10,
+    letterSpacing: 1,
     fontWeight: 'bold',
+  },
+  nameDisplayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
   },
   eminenceTitle: {
     fontSize: 24,
     color: COLORS.onSurface,
     fontWeight: 'bold',
-    letterSpacing: 2,
+    letterSpacing: 1.5,
     textTransform: 'uppercase',
     fontFamily: 'MedievalSharp_400Regular',
   },
-  eminenceSubtitle: {
+  editPen: {
+    fontSize: 14,
+    opacity: 0.7,
+  },
+  nameEditRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+    width: '90%',
+    justifyContent: 'center',
+  },
+  nameTextInput: {
+    backgroundColor: COLORS.surfaceContainer,
+    color: COLORS.onSurface,
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 14,
+    flex: 2,
+  },
+  goalTextInput: {
+    backgroundColor: COLORS.surfaceContainer,
+    color: COLORS.onSurface,
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    fontSize: 14,
+    width: 50,
+    textAlign: 'center',
+  },
+  saveProfileButton: {
+    backgroundColor: COLORS.primaryContainer,
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  saveProfileButtonText: {
+    color: '#241a00',
+    fontWeight: 'bold',
     fontSize: 16,
+  },
+  eminenceSubtitle: {
+    fontSize: 14,
     color: COLORS.onSurfaceVariant,
     fontStyle: 'italic',
-    marginTop: 8,
   },
   sectionContainer: {
-    marginBottom: 32,
+    marginBottom: 28,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -251,11 +550,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionIcon: {
-    fontSize: 20,
-    marginRight: 12,
+    fontSize: 18,
+    marginRight: 10,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: COLORS.primaryFixedDim,
     letterSpacing: 2,
     fontWeight: 'bold',
@@ -269,109 +568,192 @@ const styles = StyleSheet.create({
   attributeCard: {
     width: '48%',
     backgroundColor: COLORS.surfaceContainerLow,
-    padding: 20,
+    padding: 16,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(212,175,55,0.3)',
+    borderColor: 'rgba(212,175,55,0.2)',
     borderRadius: 8,
   },
   attributeIcon: {
-    fontSize: 32,
-    marginBottom: 12,
-  },
-  attributeLabel: {
-    fontSize: 12,
-    color: COLORS.onSurfaceVariant,
-    letterSpacing: 2,
+    fontSize: 28,
     marginBottom: 8,
   },
+  attributeLabel: {
+    fontSize: 11,
+    color: COLORS.onSurfaceVariant,
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
   attributeValue: {
-    fontSize: 32,
+    fontSize: 26,
     color: COLORS.onSurface,
     fontWeight: 'bold',
     fontFamily: 'MedievalSharp_400Regular',
   },
   statsGrid: {
-    flexDirection: 'column',
-    gap: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   statCard: {
+    width: '48%',
     backgroundColor: COLORS.surfaceContainer,
-    padding: 24,
+    padding: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.5)',
+    borderColor: COLORS.outlineVariant,
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: COLORS.onSurfaceVariant,
-    letterSpacing: 2,
-    marginBottom: 8,
+    letterSpacing: 1.5,
+    marginBottom: 6,
   },
   statValue: {
-    fontSize: 36,
+    fontSize: 28,
     color: COLORS.primaryFixedDim,
     fontWeight: 'bold',
-    marginBottom: 12,
+    marginBottom: 6,
     fontFamily: 'Cinzel_700Bold',
   },
   statDesc: {
-    fontSize: 14,
+    fontSize: 11,
     color: COLORS.onSurfaceVariant,
-    lineHeight: 20,
+    lineHeight: 15,
+  },
+  chartContainer: {
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.2)',
+    borderRadius: 8,
+    padding: 20,
+    alignItems: 'center',
+  },
+  barsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    alignItems: 'flex-end',
+    height: 140,
+  },
+  chartBarColumn: {
+    alignItems: 'center',
+    width: 40,
+  },
+  chartBarValue: {
+    color: COLORS.primaryFixed,
+    fontSize: 10,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  barTrack: {
+    height: 100,
+    width: 14,
+    backgroundColor: COLORS.surfaceContainerHighest,
+    borderRadius: 7,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+  },
+  barFill: {
+    backgroundColor: COLORS.primaryContainer,
+    width: '100%',
+    borderRadius: 7,
+  },
+  chartBarLabel: {
+    color: COLORS.onSurfaceVariant,
+    fontSize: 10,
+    marginTop: 6,
+  },
+  historyList: {
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  historyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.outlineVariant,
+  },
+  historyItemIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.surfaceContainerHighest,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  historyBookIcon: {
+    fontSize: 16,
+  },
+  historyItemContent: {
+    flex: 1,
+  },
+  historyTitle: {
+    color: COLORS.onSurface,
+    fontSize: 14,
+    fontWeight: 'bold',
+    fontFamily: 'MedievalSharp_400Regular',
+  },
+  historyMeta: {
+    color: COLORS.onSurfaceVariant,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  historyDate: {
+    color: COLORS.onSurfaceVariant,
+    fontSize: 11,
+  },
+  emptyHistory: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  emptyHistoryText: {
+    color: COLORS.onSurfaceVariant,
+    fontSize: 13,
+    fontStyle: 'italic',
   },
   vaultSection: {
     backgroundColor: COLORS.surfaceContainerHigh,
-    padding: 24,
+    padding: 20,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(212,175,55,0.3)',
+    borderColor: 'rgba(212,175,55,0.2)',
   },
   vaultHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: COLORS.outlineVariant,
-    paddingBottom: 16,
-    marginBottom: 16,
+    paddingBottom: 12,
+    marginBottom: 12,
   },
   settingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: COLORS.surfaceContainer,
-    padding: 16,
+    padding: 12,
     borderRadius: 4,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   settingInfo: {
     flex: 1,
-    paddingRight: 16,
+    paddingRight: 12,
   },
   settingTitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: COLORS.onSurface,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   settingDesc: {
-    fontSize: 12,
+    fontSize: 11,
     color: COLORS.onSurfaceVariant,
-  },
-  sealButton: {
-    backgroundColor: COLORS.primaryContainer,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 4,
-    alignSelf: 'flex-end',
-    marginTop: 16,
-  },
-  sealButtonText: {
-    color: '#554300', // on-primary-container
-    fontSize: 12,
-    fontWeight: 'bold',
-    letterSpacing: 2,
   },
   bottomNav: {
     position: 'absolute',

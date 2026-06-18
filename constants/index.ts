@@ -1,4 +1,24 @@
-// App-wide constants
+// Compatibility layer: re-export new theme tokens
+import { colors, spacing, typography } from '../src/theme';
+
+export const COLORS = colors;
+export const SPACING = spacing;
+export const FONTS = typography;
+
+export const STATUS_LABELS: Record<string, string> = {
+  reading: 'أقرأ الآن',
+  completed: 'أتممت',
+  want_to_read: 'أريد القراءة',
+  paused: 'متوقف',
+};
+
+export const STATUS_LABELS_FR: Record<string, string> = {
+  reading: 'En cours',
+  completed: 'Terminé',
+  want_to_read: 'À lire',
+  paused: 'En pause',
+};
+
 
 export const APP_NAME = 'مقرأ'; // Maqra in Arabic
 

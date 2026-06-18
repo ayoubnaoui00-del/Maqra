@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
+    "@expo-google-fonts/be-vietnam-pro": "^0.4.1",
+    "@expo-google-fonts/cinzel": "^0.4.2",
+    "@expo-google-fonts/medievalsharp": "^0.4.1",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~56.0.12",
     "expo-camera": "~56.0.8",
+    "expo-font": "~56.0.7",
     "expo-haptics": "~56.0.3",
     "expo-image-picker": "~56.0.18",
     "expo-status-bar": "~56.0.4",
@@ -17,6 +21,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "babel-preset-expo": "^56.0.15",
     "typescript": "~6.0.3"
   },
   "scripts": {

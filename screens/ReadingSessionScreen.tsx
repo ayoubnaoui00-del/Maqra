@@ -11,7 +11,7 @@ import {
   Easing
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Path, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import Reanimated, { 
   useSharedValue, 
@@ -408,19 +408,128 @@ export default function ReadingSessionScreen({
 
       {/* Bottom Nav */}
       <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem} onPress={() => onNavigate?.('Library')}>
+        {/* Skeuomorphic Stone Background with Cracks & Chiseled details */}
+        <Svg height="100%" width="100%" viewBox="0 0 400 64" preserveAspectRatio="none" style={StyleSheet.absoluteFill}>
+          <Defs>
+            {/* Dark Stone Gradient */}
+            <LinearGradient id="stoneGrad" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor="#2c2826" />
+              <Stop offset="0.2" stopColor="#1e1b1a" />
+              <Stop offset="0.8" stopColor="#131211" />
+              <Stop offset="1" stopColor="#0a0a09" />
+            </LinearGradient>
+            {/* Bronze/Iron Bevel Gradient */}
+            <LinearGradient id="bronzeGrad" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor="#bfa37a" />
+              <Stop offset="0.5" stopColor="#8c6239" />
+              <Stop offset="1" stopColor="#543b22" />
+            </LinearGradient>
+          </Defs>
+          
+          {/* Base Stone Background */}
+          <Rect x="0" y="0" width="400" height="64" fill="url(#stoneGrad)" />
+          
+          {/* Top Bevel / Forged Bronze Border */}
+          <Rect x="0" y="0" width="400" height="4" fill="url(#bronzeGrad)" />
+          
+          {/* Ancient Stone Cracks */}
+          <Path d="M 40,4 L 43,15 L 41,24 L 45,30 M 41,24 L 38,27" stroke="#0a0a09" strokeWidth="1.5" fill="none" opacity="0.8" />
+          <Path d="M 41,4 L 44,15 L 42,24 L 46,30" stroke="#3d3936" strokeWidth="0.5" fill="none" opacity="0.4" />
+          
+          <Path d="M 180,4 L 176,12 L 179,22 M 176,12 L 172,16" stroke="#0a0a09" strokeWidth="1.5" fill="none" opacity="0.8" />
+          <Path d="M 181,4 L 177,12 L 180,22" stroke="#3d3936" strokeWidth="0.5" fill="none" opacity="0.4" />
+
+          <Path d="M 290,35 L 293,42 L 291,55 M 293,42 L 298,46" stroke="#0a0a09" strokeWidth="1.5" fill="none" opacity="0.8" />
+          
+          {/* Panel Dividers / Pillars */}
+          <Path d="M 100,4 L 100,64" stroke="#2b2416" strokeWidth="2" opacity="0.75" />
+          <Path d="M 101,4 L 101,64" stroke="#ffe088" strokeWidth="1" opacity="0.1" />
+          
+          <Path d="M 200,4 L 200,64" stroke="#2b2416" strokeWidth="2" opacity="0.75" />
+          <Path d="M 201,4 L 201,64" stroke="#ffe088" strokeWidth="1" opacity="0.1" />
+          
+          <Path d="M 300,4 L 300,64" stroke="#2b2416" strokeWidth="2" opacity="0.75" />
+          <Path d="M 301,4 L 301,64" stroke="#ffe088" strokeWidth="1" opacity="0.1" />
+        </Svg>
+        
+        {/* Tab 1: Library */}
+        <TouchableOpacity 
+          style={[styles.navItem, currentScreen === 'Library' && styles.navItemActive]} 
+          onPress={() => onNavigate?.('Library')}
+        >
+          {currentScreen === 'Library' && <View style={styles.activeGlowUnderlay} />}
+          
+          {/* Gemstones in gold sockets */}
+          <View style={[styles.gemstoneSocket, styles.gemTopLeft]}>
+            <View style={[styles.gemstone, { backgroundColor: currentScreen === 'Library' ? '#e74c3c' : '#7b241c' }]} />
+          </View>
+          <View style={[styles.gemstoneSocket, styles.gemTopRight]}>
+            <View style={[styles.gemstone, { backgroundColor: currentScreen === 'Library' ? '#e74c3c' : '#7b241c' }]} />
+          </View>
+          
+          {/* Arcane Rune watermark */}
+          <Text style={[styles.runeWatermark, currentScreen === 'Library' && styles.runeWatermarkActive]}>᚛</Text>
+          
           <Text style={currentScreen === 'Library' ? styles.navIconActive : styles.navIcon}>📚</Text>
           <Text style={currentScreen === 'Library' ? styles.navTextActive : styles.navText}>Library</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => onNavigate?.('Scripture')}>
+
+        {/* Tab 2: Scripture */}
+        <TouchableOpacity 
+          style={[styles.navItem, currentScreen === 'Scripture' && styles.navItemActive]} 
+          onPress={() => onNavigate?.('Scripture')}
+        >
+          {currentScreen === 'Scripture' && <View style={styles.activeGlowUnderlay} />}
+          
+          <View style={[styles.gemstoneSocket, styles.gemTopLeft]}>
+            <View style={[styles.gemstone, { backgroundColor: currentScreen === 'Scripture' ? '#3498db' : '#1f618d' }]} />
+          </View>
+          <View style={[styles.gemstoneSocket, styles.gemTopRight]}>
+            <View style={[styles.gemstone, { backgroundColor: currentScreen === 'Scripture' ? '#3498db' : '#1f618d' }]} />
+          </View>
+          
+          <Text style={[styles.runeWatermark, currentScreen === 'Scripture' && styles.runeWatermarkActive]}>ᚠ</Text>
+          
           <Text style={currentScreen === 'Scripture' ? styles.navIconActive : styles.navIcon}>📖</Text>
           <Text style={currentScreen === 'Scripture' ? styles.navTextActive : styles.navText}>Scripture</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => onNavigate?.('Scrolls')}>
+
+        {/* Tab 3: Scrolls */}
+        <TouchableOpacity 
+          style={[styles.navItem, currentScreen === 'Scrolls' && styles.navItemActive]} 
+          onPress={() => onNavigate?.('Scrolls')}
+        >
+          {currentScreen === 'Scrolls' && <View style={styles.activeGlowUnderlay} />}
+          
+          <View style={[styles.gemstoneSocket, styles.gemTopLeft]}>
+            <View style={[styles.gemstone, { backgroundColor: currentScreen === 'Scrolls' ? '#2ecc71' : '#1e8449' }]} />
+          </View>
+          <View style={[styles.gemstoneSocket, styles.gemTopRight]}>
+            <View style={[styles.gemstone, { backgroundColor: currentScreen === 'Scrolls' ? '#2ecc71' : '#1e8449' }]} />
+          </View>
+          
+          <Text style={[styles.runeWatermark, currentScreen === 'Scrolls' && styles.runeWatermarkActive]}>ᚦ</Text>
+          
           <Text style={currentScreen === 'Scrolls' ? styles.navIconActive : styles.navIcon}>📜</Text>
           <Text style={currentScreen === 'Scrolls' ? styles.navTextActive : styles.navText}>Scrolls</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => onNavigate?.('Temple')}>
+
+        {/* Tab 4: Temple */}
+        <TouchableOpacity 
+          style={[styles.navItem, currentScreen === 'Temple' && styles.navItemActive]} 
+          onPress={() => onNavigate?.('Temple')}
+        >
+          {currentScreen === 'Temple' && <View style={styles.activeGlowUnderlay} />}
+          
+          <View style={[styles.gemstoneSocket, styles.gemTopLeft]}>
+            <View style={[styles.gemstone, { backgroundColor: currentScreen === 'Temple' ? '#f1c40f' : '#9a7d0a' }]} />
+          </View>
+          <View style={[styles.gemstoneSocket, styles.gemTopRight]}>
+            <View style={[styles.gemstone, { backgroundColor: currentScreen === 'Temple' ? '#f1c40f' : '#9a7d0a' }]} />
+          </View>
+          
+          <Text style={[styles.runeWatermark, currentScreen === 'Temple' && styles.runeWatermarkActive]}>ᛟ</Text>
+          
           <Text style={currentScreen === 'Temple' ? styles.navIconActive : styles.navIcon}>🏛️</Text>
           <Text style={currentScreen === 'Temple' ? styles.navTextActive : styles.navText}>Temple</Text>
         </TouchableOpacity>
@@ -753,37 +862,132 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: '100%',
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: COLORS.surfaceContainerLow,
-    paddingVertical: 16,
-    borderTopWidth: 2,
-    borderTopColor: COLORS.primaryContainer,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    backgroundColor: '#111010', // Deep dark weathered stone/iron background
+    borderTopWidth: 4,
+    borderTopColor: '#8c6239', // Heavy forged bronze top border
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    height: 64, // Reduced from 80
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.8,
+    shadowRadius: 15,
+    elevation: 25,
+  },
+  navTopAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: '#ffe088', // Thin gold highlight line right under top border
+    opacity: 0.4,
   },
   navItem: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    borderRightWidth: 1,
+    borderRightColor: '#2b2416', // Dark iron borders between panels
+    borderLeftWidth: 1,
+    borderLeftColor: '#1a160d',
+    backgroundColor: 'transparent', // Transparent to let the stone Svg background show through
+    position: 'relative',
+    height: '100%',
+  },
+  navItemActive: {
+    backgroundColor: 'rgba(255, 150, 0, 0.02)', // Extremely subtle warm tint when active
+  },
+  activeGlowUnderlay: {
+    position: 'absolute',
+    width: 44, // Reduced from 50
+    height: 44, // Reduced from 50
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 150, 0, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 170, 0, 0.1)',
+    shadowColor: '#ff9900',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 4,
+    alignSelf: 'center',
+    top: 6, // Adjusted from 10
+  },
+  gemstoneSocket: {
+    position: 'absolute',
+    top: 6, // Adjusted from 8
+    width: 10, // Slightly smaller from 12
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1.2,
+    borderColor: '#bfa37a', // Bronze rim
+    backgroundColor: '#1b1915', // Forged metal socket background
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.8,
+    shadowRadius: 1,
+    elevation: 2,
+  },
+  gemTopLeft: {
+    left: 6, // Adjusted from 8
+  },
+  gemTopRight: {
+    right: 6, // Adjusted from 8
+  },
+  gemstone: {
+    width: 5, // Slightly smaller from 6
+    height: 5,
+    borderRadius: 2.5,
+  },
+  runeWatermark: {
+    position: 'absolute',
+    fontSize: 16, // Slightly smaller from 20
+    color: '#00ffff', // Glowing blue/cyan arcane runes
+    opacity: 0.05,
+    bottom: 16, // Adjusted from 22
+    alignSelf: 'center',
+    fontFamily: 'MedievalSharp_400Regular',
+  },
+  runeWatermarkActive: {
+    opacity: 0.2,
+    textShadowColor: '#00ffff',
+    textShadowRadius: 6,
   },
   navIconActive: {
-    fontSize: 24,
-    color: COLORS.primaryFixed,
-  },
-  navTextActive: {
-    color: COLORS.primaryFixed,
-    fontSize: 12,
-    marginTop: 4,
-    fontWeight: 'bold',
-    fontFamily: 'MedievalSharp_400Regular',
+    fontSize: 22, // Reduced from 26
+    color: '#ffe088', // Magical gold
+    textShadowColor: '#ff9900', // Fiery orange/magical gold aura glow
+    textShadowRadius: 8,
+    textShadowOffset: { width: 0, height: 0 },
   },
   navIcon: {
-    fontSize: 24,
-    opacity: 0.5,
+    fontSize: 18, // Reduced from 22
+    color: '#3d3d3d', // Dark unlit stone/aged metal style
+    opacity: 0.45,
+    textShadowColor: '#000000',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 1,
+  },
+  navTextActive: {
+    color: '#ffe088', // Glowing gold
+    fontSize: 9.5, // Slightly smaller from 11
+    marginTop: 2, // Reduced from 4
+    fontWeight: 'bold',
+    fontFamily: 'MedievalSharp_400Regular',
+    textShadowColor: '#ff9900',
+    textShadowRadius: 6,
+    textShadowOffset: { width: 0, height: 0 },
+    letterSpacing: 0.5,
   },
   navText: {
-    color: COLORS.onSurfaceVariant,
-    fontSize: 12,
-    marginTop: 4,
-    opacity: 0.5,
+    color: '#4d4635', // Dark unlit text
+    fontSize: 9.5, // Slightly smaller from 11
+    marginTop: 2, // Reduced from 4
     fontFamily: 'MedievalSharp_400Regular',
+    opacity: 0.7,
+    letterSpacing: 0.5,
   },
 });

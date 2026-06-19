@@ -490,6 +490,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
     letterSpacing: 2,
+    fontFamily: 'MedievalSharp_400Regular',
   },
   centerSection: {
     alignItems: 'center',
@@ -505,6 +506,7 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     fontWeight: 'bold',
     marginBottom: 8,
+    fontFamily: 'MedievalSharp_400Regular',
   },
   metaTitle: {
     fontSize: 30,
@@ -561,12 +563,14 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
     marginTop: 2,
     opacity: 0.7,
+    fontFamily: 'MedievalSharp_400Regular',
   },
   progressSubtext: {
     fontSize: 11,
     color: COLORS.onSurfaceVariant,
     marginTop: 8,
     textAlign: 'center',
+    fontFamily: 'MedievalSharp_400Regular',
   },
   controlsRow: {
     flexDirection: 'row',
@@ -616,6 +620,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 2,
     opacity: 0.6,
+    fontFamily: 'MedievalSharp_400Regular',
   },
   modalOverlay: {
     flex: 1,
@@ -666,6 +671,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     textAlign: 'center',
     marginBottom: 8,
+    fontFamily: 'MedievalSharp_400Regular',
   },
   pageInputRow: {
     flexDirection: 'row',
@@ -689,6 +695,7 @@ const styles = StyleSheet.create({
   pageTotalText: {
     color: COLORS.onSurfaceVariant,
     fontSize: 16,
+    fontFamily: 'MedievalSharp_400Regular',
   },
   modalDesc: {
     color: COLORS.onSurfaceVariant,
@@ -715,6 +722,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 1.5,
     fontSize: 13,
+    fontFamily: 'MedievalSharp_400Regular',
   },
   cancelButton: {
     backgroundColor: 'transparent',
@@ -725,6 +733,7 @@ const styles = StyleSheet.create({
     color: COLORS.onSurfaceVariant,
     fontWeight: 'bold',
     fontSize: 13,
+    fontFamily: 'MedievalSharp_400Regular',
   },
   primaryButton: {
     backgroundColor: COLORS.primaryContainer,

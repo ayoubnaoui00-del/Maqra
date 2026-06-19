@@ -498,6 +498,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1,
     fontWeight: 'bold',
+    fontFamily: 'MedievalSharp_400Regular',
   },
   nameDisplayRow: {
     flexDirection: 'row',
@@ -609,6 +610,7 @@ const styles = StyleSheet.create({
     color: COLORS.onSurfaceVariant,
     letterSpacing: 1.5,
     marginBottom: 4,
+    fontFamily: 'MedievalSharp_400Regular',
   },
   attributeValue: {
     fontSize: 26,
@@ -633,13 +635,14 @@ const styles = StyleSheet.create({
     color: COLORS.onSurfaceVariant,
     letterSpacing: 1.5,
     marginBottom: 6,
+    fontFamily: 'MedievalSharp_400Regular',
   },
   statValue: {
     fontSize: 28,
     color: COLORS.primaryFixedDim,
     fontWeight: 'bold',
     marginBottom: 6,
-    fontFamily: 'Cinzel_700Bold',
+    fontFamily: 'MedievalSharp_400Regular',
   },
   statDesc: {
     fontSize: 11,
@@ -775,6 +778,7 @@ const styles = StyleSheet.create({
     color: COLORS.onSurface,
     fontWeight: 'bold',
     marginBottom: 2,
+    fontFamily: 'MedievalSharp_400Regular',
   },
   settingDesc: {
     fontSize: 11,

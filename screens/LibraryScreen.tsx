@@ -789,10 +789,12 @@ const styles = StyleSheet.create({
   progressLabel: {
     color: COLORS.onSurfaceVariant,
     fontSize: 12,
+    fontFamily: 'MedievalSharp_400Regular',
   },
   progressValue: {
     color: COLORS.onSurfaceVariant,
     fontSize: 12,
+    fontFamily: 'MedievalSharp_400Regular',
   },
   progressBarBg: {
     height: 10,
@@ -983,6 +985,7 @@ const styles = StyleSheet.create({
   gridProgressText: {
     color: COLORS.onSurfaceVariant,
     fontSize: 10,
+    fontFamily: 'MedievalSharp_400Regular',
   },
   modalOverlay: {
     flex: 1,
@@ -1071,6 +1074,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.onSurfaceVariant,
     marginBottom: 2,
+    fontFamily: 'MedievalSharp_400Regular',
   },
   modalSection: {
     marginBottom: 20,
@@ -1084,6 +1088,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 2,
     marginBottom: 10,
+    fontFamily: 'MedievalSharp_400Regular',
   },
   ratingRow: {
     flexDirection: 'row',
@@ -1149,6 +1154,7 @@ const styles = StyleSheet.create({
     color: COLORS.onSurfaceVariant,
     fontSize: 14,
     flex: 1,
+    fontFamily: 'MedievalSharp_400Regular',
   },
   applyProgressButton: {
     backgroundColor: COLORS.surfaceContainerHighest,

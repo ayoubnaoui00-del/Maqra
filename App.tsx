@@ -41,6 +41,7 @@ export default function App() {
         currentPage: 150,
         genre: 'History',
         language: 'en',
+        coverUri: 'file:///C:/Users/user/.gemini/antigravity-ide/brain/c5b02f90-18b5-4e4c-8f1d-9edc2e402d8e/muqaddimah_cover_1781865740916.png',
       });
       addBook({
         title: 'The Ring of the Dove',
@@ -50,6 +51,7 @@ export default function App() {
         currentPage: 280,
         genre: 'Literature',
         language: 'en',
+        coverUri: 'file:///C:/Users/user/.gemini/antigravity-ide/brain/c5b02f90-18b5-4e4c-8f1d-9edc2e402d8e/ring_dove_cover_1781865753421.png',
       });
       addBook({
         title: 'Les Misérables',
@@ -59,6 +61,7 @@ export default function App() {
         currentPage: 0,
         genre: 'Novel',
         language: 'en',
+        coverUri: 'file:///C:/Users/user/.gemini/antigravity-ide/brain/c5b02f90-18b5-4e4c-8f1d-9edc2e402d8e/les_miserables_cover_1781865765782.png',
       });
       addBook({
         title: 'The Little Prince',
@@ -68,9 +71,26 @@ export default function App() {
         currentPage: 45,
         genre: 'Story',
         language: 'en',
+        coverUri: 'file:///C:/Users/user/.gemini/antigravity-ide/brain/c5b02f90-18b5-4e4c-8f1d-9edc2e402d8e/little_prince_cover_1781865789990.png',
+      });
+    } else {
+      // Seed covers for existing books if they do not have them
+      books.forEach((b) => {
+        if (!b.coverUri) {
+          const store = useBookStore.getState();
+          if (b.title === 'The Muqaddimah') {
+            store.updateBook(b.id, { coverUri: 'file:///C:/Users/user/.gemini/antigravity-ide/brain/c5b02f90-18b5-4e4c-8f1d-9edc2e402d8e/muqaddimah_cover_1781865740916.png' });
+          } else if (b.title === 'The Ring of the Dove') {
+            store.updateBook(b.id, { coverUri: 'file:///C:/Users/user/.gemini/antigravity-ide/brain/c5b02f90-18b5-4e4c-8f1d-9edc2e402d8e/ring_dove_cover_1781865753421.png' });
+          } else if (b.title === 'Les Misérables') {
+            store.updateBook(b.id, { coverUri: 'file:///C:/Users/user/.gemini/antigravity-ide/brain/c5b02f90-18b5-4e4c-8f1d-9edc2e402d8e/les_miserables_cover_1781865765782.png' });
+          } else if (b.title === 'The Little Prince') {
+            store.updateBook(b.id, { coverUri: 'file:///C:/Users/user/.gemini/antigravity-ide/brain/c5b02f90-18b5-4e4c-8f1d-9edc2e402d8e/little_prince_cover_1781865789990.png' });
+          }
+        }
       });
     }
-  }, []);
+  }, [books]);
 
   if (!fontsLoaded) {
     return (

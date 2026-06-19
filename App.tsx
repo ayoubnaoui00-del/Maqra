@@ -116,6 +116,7 @@ export default function App() {
       case 'Library':
         return (
           <LibraryScreen 
+            currentScreen={currentScreen}
             onNavigate={setCurrentScreen} 
             onStartSession={handleStartSession} 
           />
@@ -123,6 +124,7 @@ export default function App() {
       case 'Scripture':
         return (
           <ReadingSessionScreen 
+            currentScreen={currentScreen}
             bookId={selectedBookId} 
             onEndSession={() => {
               setSelectedBookId(null);
@@ -132,11 +134,17 @@ export default function App() {
           />
         );
       case 'Temple':
-        return <ProfileScreen onNavigate={setCurrentScreen} />;
+        return (
+          <ProfileScreen 
+            currentScreen={currentScreen}
+            onNavigate={setCurrentScreen} 
+          />
+        );
       case 'Scrolls':
       default:
         return (
           <LibraryScreen 
+            currentScreen={currentScreen}
             onNavigate={setCurrentScreen} 
             onStartSession={handleStartSession} 
           />

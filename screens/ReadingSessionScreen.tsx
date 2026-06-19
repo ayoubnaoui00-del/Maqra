@@ -44,10 +44,12 @@ const COLORS = {
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export default function ReadingSessionScreen({ 
+  currentScreen = 'Scripture',
   bookId, 
   onEndSession, 
   onNavigate 
 }: { 
+  currentScreen?: ScreenName;
   bookId: string | null;
   onEndSession?: () => void;
   onNavigate?: (screen: ScreenName) => void;
@@ -407,20 +409,20 @@ export default function ReadingSessionScreen({
       {/* Bottom Nav */}
       <View style={styles.bottomNav}>
         <TouchableOpacity style={styles.navItem} onPress={() => onNavigate?.('Library')}>
-          <Text style={styles.navIcon}>📚</Text>
-          <Text style={styles.navText}>Library</Text>
+          <Text style={currentScreen === 'Library' ? styles.navIconActive : styles.navIcon}>📚</Text>
+          <Text style={currentScreen === 'Library' ? styles.navTextActive : styles.navText}>Library</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => onNavigate?.('Scripture')}>
-          <Text style={styles.navIconActive}>📖</Text>
-          <Text style={styles.navTextActive}>Scripture</Text>
+          <Text style={currentScreen === 'Scripture' ? styles.navIconActive : styles.navIcon}>📖</Text>
+          <Text style={currentScreen === 'Scripture' ? styles.navTextActive : styles.navText}>Scripture</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => onNavigate?.('Scrolls')}>
-          <Text style={styles.navIcon}>📜</Text>
-          <Text style={styles.navText}>Scrolls</Text>
+          <Text style={currentScreen === 'Scrolls' ? styles.navIconActive : styles.navIcon}>📜</Text>
+          <Text style={currentScreen === 'Scrolls' ? styles.navTextActive : styles.navText}>Scrolls</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => onNavigate?.('Temple')}>
-          <Text style={styles.navIcon}>🏛️</Text>
-          <Text style={styles.navText}>Temple</Text>
+          <Text style={currentScreen === 'Temple' ? styles.navIconActive : styles.navIcon}>🏛️</Text>
+          <Text style={currentScreen === 'Temple' ? styles.navTextActive : styles.navText}>Temple</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -771,6 +773,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
     fontWeight: 'bold',
+    fontFamily: 'MedievalSharp_400Regular',
   },
   navIcon: {
     fontSize: 24,
@@ -781,5 +784,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
     opacity: 0.5,
+    fontFamily: 'MedievalSharp_400Regular',
   },
 });

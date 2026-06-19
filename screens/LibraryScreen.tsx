@@ -36,11 +36,12 @@ const COLORS = {
 };
 
 interface LibraryScreenProps {
+  currentScreen?: ScreenName;
   onNavigate?: (screen: ScreenName) => void;
   onStartSession?: (bookId: string) => void;
 }
 
-export default function LibraryScreen({ onNavigate, onStartSession }: LibraryScreenProps) {
+export default function LibraryScreen({ currentScreen = 'Library', onNavigate, onStartSession }: LibraryScreenProps) {
   const books = useBookStore((s) => s.books);
   const addBook = useBookStore((s) => s.addBook);
   const deleteBook = useBookStore((s) => s.deleteBook);
@@ -256,8 +257,8 @@ export default function LibraryScreen({ onNavigate, onStartSession }: LibraryScr
         <View style={styles.titleSection}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <View>
-              <Text style={styles.pageTitle}>Library</Text>
-              <Text style={styles.pageSubtitle}>ANCIENT ARCHIVES</Text>
+              <Text style={styles.pageTitle}>{currentScreen === 'Scrolls' ? 'Scrolls' : 'Library'}</Text>
+              <Text style={styles.pageSubtitle}>{currentScreen === 'Scrolls' ? 'MANUSCRIPT ARCHIVES' : 'ANCIENT ARCHIVES'}</Text>
             </View>
             <TouchableOpacity style={styles.summonButton} onPress={() => setShowSummonModal(true)}>
               <Text style={styles.summonButtonText}>+ SUMMON</Text>
@@ -278,31 +279,33 @@ export default function LibraryScreen({ onNavigate, onStartSession }: LibraryScr
         </View>
 
         {/* Imperial Status */}
-        <View style={styles.statusWidget}>
-          <View style={styles.statusHeader}>
-            <Text style={styles.statusTitle}>Imperial Status</Text>
-            <Text style={styles.fireIcon}>🔥</Text>
-          </View>
-          
-          <View style={styles.progressRow}>
-            <View style={styles.progressHeader}>
-              <Text style={styles.progressLabel}>Knowledge Deciphered</Text>
-              <Text style={styles.progressValue}>{completionPercentage}%</Text>
+        {currentScreen !== 'Scrolls' && (
+          <View style={styles.statusWidget}>
+            <View style={styles.statusHeader}>
+              <Text style={styles.statusTitle}>Imperial Status</Text>
+              <Text style={styles.fireIcon}>🔥</Text>
             </View>
-            <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: `${completionPercentage}%` }]} />
+            
+            <View style={styles.progressRow}>
+              <View style={styles.progressHeader}>
+                <Text style={styles.progressLabel}>Knowledge Deciphered</Text>
+                <Text style={styles.progressValue}>{completionPercentage}%</Text>
+              </View>
+              <View style={styles.progressBarBg}>
+                <View style={[styles.progressBarFill, { width: `${completionPercentage}%` }]} />
+              </View>
             </View>
-          </View>
 
-          <View style={styles.badgeRow}>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>🔖 {completedBooks} / {totalBooks} Completed</Text>
+            <View style={styles.badgeRow}>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>🔖 {completedBooks} / {totalBooks} Completed</Text>
+              </View>
             </View>
           </View>
-        </View>
+        )}
 
         {/* Currently Reading Featured Section */}
-        {featuredBook && (
+        {currentScreen !== 'Scrolls' && featuredBook && (
           <View style={styles.featuredSection}>
             {featuredBook.coverUri ? (
               <Image source={{ uri: featuredBook.coverUri }} style={styles.featuredImage} />
@@ -339,7 +342,9 @@ export default function LibraryScreen({ onNavigate, onStartSession }: LibraryScr
         {/* Recent Acquisitions */}
         <View style={styles.recentSection}>
           <View style={styles.recentHeaderStyle}>
-            <Text style={styles.sectionTitle}>Recent Acquisitions</Text>
+            <Text style={styles.sectionTitle}>
+              {currentScreen === 'Scrolls' ? 'Manuscript Archives' : 'Recent Acquisitions'}
+            </Text>
           </View>
 
           <View style={styles.grid}>
@@ -665,20 +670,20 @@ export default function LibraryScreen({ onNavigate, onStartSession }: LibraryScr
       {/* Bottom Nav */}
       <View style={styles.bottomNav}>
         <TouchableOpacity style={styles.navItem} onPress={() => onNavigate?.('Library')}>
-          <Text style={styles.navIconActive}>📚</Text>
-          <Text style={styles.navTextActive}>Library</Text>
+          <Text style={currentScreen === 'Library' ? styles.navIconActive : styles.navIcon}>📚</Text>
+          <Text style={currentScreen === 'Library' ? styles.navTextActive : styles.navText}>Library</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => onNavigate?.('Scripture')}>
-          <Text style={styles.navIcon}>📖</Text>
-          <Text style={styles.navText}>Scripture</Text>
+          <Text style={currentScreen === 'Scripture' ? styles.navIconActive : styles.navIcon}>📖</Text>
+          <Text style={currentScreen === 'Scripture' ? styles.navTextActive : styles.navText}>Scripture</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => onNavigate?.('Scrolls')}>
-          <Text style={styles.navIcon}>📜</Text>
-          <Text style={styles.navText}>Scrolls</Text>
+          <Text style={currentScreen === 'Scrolls' ? styles.navIconActive : styles.navIcon}>📜</Text>
+          <Text style={currentScreen === 'Scrolls' ? styles.navTextActive : styles.navText}>Scrolls</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => onNavigate?.('Temple')}>
-          <Text style={styles.navIcon}>🏛️</Text>
-          <Text style={styles.navText}>Temple</Text>
+          <Text style={currentScreen === 'Temple' ? styles.navIconActive : styles.navIcon}>🏛️</Text>
+          <Text style={currentScreen === 'Temple' ? styles.navTextActive : styles.navText}>Temple</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -1234,6 +1239,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
     fontWeight: 'bold',
+    fontFamily: 'MedievalSharp_400Regular',
   },
   navIcon: {
     fontSize: 24,
@@ -1244,6 +1250,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
     opacity: 0.5,
+    fontFamily: 'MedievalSharp_400Regular',
   },
   summonButton: {
     backgroundColor: COLORS.primaryContainer,

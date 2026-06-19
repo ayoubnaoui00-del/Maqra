@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Image } from 'react-native';
 import { useBookStore } from './store/useBookStore';
 import LibraryScreen from './screens/LibraryScreen';
 import ProfileScreen from './screens/ProfileScreen';
@@ -32,6 +32,11 @@ export default function App() {
 
   // Seed initial sample books for demonstration if empty
   useEffect(() => {
+    const muqaddimahCover = Image.resolveAssetSource(require('./assets/muqaddimah_cover.png')).uri;
+    const ringDoveCover = Image.resolveAssetSource(require('./assets/ring_dove_cover.png')).uri;
+    const lesMiserablesCover = Image.resolveAssetSource(require('./assets/les_miserables_cover.png')).uri;
+    const littlePrinceCover = Image.resolveAssetSource(require('./assets/little_prince_cover.png')).uri;
+
     if (books.length === 0) {
       addBook({
         title: 'The Muqaddimah',
@@ -41,7 +46,7 @@ export default function App() {
         currentPage: 150,
         genre: 'History',
         language: 'en',
-        coverUri: 'file:///C:/Users/user/.gemini/antigravity-ide/brain/c5b02f90-18b5-4e4c-8f1d-9edc2e402d8e/muqaddimah_cover_1781865740916.png',
+        coverUri: muqaddimahCover,
       });
       addBook({
         title: 'The Ring of the Dove',
@@ -51,7 +56,7 @@ export default function App() {
         currentPage: 280,
         genre: 'Literature',
         language: 'en',
-        coverUri: 'file:///C:/Users/user/.gemini/antigravity-ide/brain/c5b02f90-18b5-4e4c-8f1d-9edc2e402d8e/ring_dove_cover_1781865753421.png',
+        coverUri: ringDoveCover,
       });
       addBook({
         title: 'Les Misérables',
@@ -61,7 +66,7 @@ export default function App() {
         currentPage: 0,
         genre: 'Novel',
         language: 'en',
-        coverUri: 'file:///C:/Users/user/.gemini/antigravity-ide/brain/c5b02f90-18b5-4e4c-8f1d-9edc2e402d8e/les_miserables_cover_1781865765782.png',
+        coverUri: lesMiserablesCover,
       });
       addBook({
         title: 'The Little Prince',
@@ -71,21 +76,22 @@ export default function App() {
         currentPage: 45,
         genre: 'Story',
         language: 'en',
-        coverUri: 'file:///C:/Users/user/.gemini/antigravity-ide/brain/c5b02f90-18b5-4e4c-8f1d-9edc2e402d8e/little_prince_cover_1781865789990.png',
+        coverUri: littlePrinceCover,
       });
     } else {
-      // Seed covers for existing books if they do not have them
+      // Seed/migrate covers for existing books to local assets
       books.forEach((b) => {
-        if (!b.coverUri) {
-          const store = useBookStore.getState();
+        const store = useBookStore.getState();
+        const isOldPath = b.coverUri && b.coverUri.includes('.gemini/antigravity-ide');
+        if (!b.coverUri || isOldPath) {
           if (b.title === 'The Muqaddimah') {
-            store.updateBook(b.id, { coverUri: 'file:///C:/Users/user/.gemini/antigravity-ide/brain/c5b02f90-18b5-4e4c-8f1d-9edc2e402d8e/muqaddimah_cover_1781865740916.png' });
+            store.updateBook(b.id, { coverUri: muqaddimahCover });
           } else if (b.title === 'The Ring of the Dove') {
-            store.updateBook(b.id, { coverUri: 'file:///C:/Users/user/.gemini/antigravity-ide/brain/c5b02f90-18b5-4e4c-8f1d-9edc2e402d8e/ring_dove_cover_1781865753421.png' });
+            store.updateBook(b.id, { coverUri: ringDoveCover });
           } else if (b.title === 'Les Misérables') {
-            store.updateBook(b.id, { coverUri: 'file:///C:/Users/user/.gemini/antigravity-ide/brain/c5b02f90-18b5-4e4c-8f1d-9edc2e402d8e/les_miserables_cover_1781865765782.png' });
+            store.updateBook(b.id, { coverUri: lesMiserablesCover });
           } else if (b.title === 'The Little Prince') {
-            store.updateBook(b.id, { coverUri: 'file:///C:/Users/user/.gemini/antigravity-ide/brain/c5b02f90-18b5-4e4c-8f1d-9edc2e402d8e/little_prince_cover_1781865789990.png' });
+            store.updateBook(b.id, { coverUri: littlePrinceCover });
           }
         }
       });
